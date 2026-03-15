@@ -28,8 +28,8 @@ class _ViewrecipeState extends State<Viewrecipe> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1000',
+                  child: Image.asset(
+                    'assets/images/burger.jpg',
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
