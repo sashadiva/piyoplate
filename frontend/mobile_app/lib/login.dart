@@ -25,10 +25,7 @@ class _LoginPageState extends State<LoginPage> {
               obscureText: true,
             ),
             const SizedBox(height: 32),
-            const ElevatedButton(
-              onPressed: null, // TODO: Implement login logic
-              child: Text('Login'),
-            ),
+            const ElevatedButton(onPressed: null, child: Text('Login')),
           ],
         ),
       ),
