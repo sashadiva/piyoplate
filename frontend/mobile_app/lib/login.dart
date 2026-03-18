@@ -12,10 +12,25 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
-      body: const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text('Login Page'),
-        image.asset('assets/images/piyo-friends.png'),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/images/piyo-friends.png', height: 150),
+            const TextField(decoration: InputDecoration(labelText: 'Email')),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(labelText: 'Password'),
+              obscureText: true,
+            ),
+            const SizedBox(height: 32),
+            const ElevatedButton(
+              onPressed: null, // TODO: Implement login logic
+              child: Text('Login'),
+            ),
+          ],
+        ),
       ),
     );
   }
