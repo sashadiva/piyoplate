@@ -29,7 +29,7 @@ class _ViewrecipeState extends State<Viewrecipe> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Image.asset(
-                    'Assets/piyo-friends.png',
+                    'assets/images/piyo-friends.png',
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
