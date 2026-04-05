@@ -11,7 +11,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Cari user berdasarkan email
-    const user = await prisma.msUser.findUnique({
+    const user = await prisma.users.findUnique({
       where: { email: email }
     });
 
