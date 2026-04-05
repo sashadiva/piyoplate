@@ -14,7 +14,7 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Menggunakan Prisma untuk Insert
-    const newUser = await prisma.msUser.create({
+    const newUser = await prisma.users.create({
       data: {
         username,
         email,
