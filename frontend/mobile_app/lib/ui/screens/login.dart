@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_app/register.dart';
-import 'package:mobile_app/widgets/mainButton.dart';
-import 'package:mobile_app/widgets/customTextFields.dart';
-import 'package:mobile_app/widgets/waveClipper.dart';
+import 'package:mobile_app/ui/screens/register.dart';
+import 'package:mobile_app/ui/widgets/mainButton.dart';
+import 'package:mobile_app/ui/widgets/customTextFields.dart';
+import 'package:mobile_app/ui/widgets/waveClipper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_app/widgets/mainButton.dart';
-import 'package:mobile_app/widgets/customTextFields.dart';
+import 'package:mobile_app/ui/widgets/mainButton.dart';
+import 'package:mobile_app/ui/widgets/customTextFields.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
