@@ -3,7 +3,7 @@ import { addDailyLog, getCalorieSummary } from '../controllers/nutrisionsControl
 
 const router = Router();
 
-router.post('/log', addDailyLog);           // UC-08[cite: 1]
-router.get('/summary/:userId', getCalorieSummary); // UC-08[cite: 1]
+router.post('/log', addDailyLog);
+router.get('/summary/:userId', getCalorieSummary);
 
 export default router;
