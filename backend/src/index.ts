@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import authRoute from "./routes/auth";
+import authRoute from "./routes/authRoutes";
 
 const app = express();
 
