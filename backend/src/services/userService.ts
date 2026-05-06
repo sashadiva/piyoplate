@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { hashPassword } from '../utils/auth';
 
-const createUser = async (userData: any) => {
+export const createUser = async (userData: any) => {
   const hashedPassword = await hashPassword(userData.password);
   
   return await prisma.users.create({
@@ -23,17 +23,13 @@ const createUser = async (userData: any) => {
   });
 };
 
-const findUserByEmail = async (email: string) => {
+export const findUserByEmail = async (email: string) => {
   return await prisma.users.findUnique({
     where: { email }
   });
 };
 
-/**
- * UC-03: View Profile
- * Mengambil informasi profil lengkap beserta resep yang pernah diposting oleh user tersebut.
- */
-const getUserProfile = async (userId: number) => {
+export const getUserProfile = async (userId: number) => {
   return await prisma.users.findUnique({
     where: { id: userId },
     include: {
@@ -49,11 +45,7 @@ const getUserProfile = async (userId: number) => {
   });
 };
 
-/**
- * UC-12: Manage User (Admin Feature)
- * Digunakan oleh admin untuk melihat semua user atau memperbarui status akun.
- */
-const getAllUsers = async () => {
+export const getAllUsers = async () => {
   return await prisma.users.findMany({
     select: {
       id: true,
@@ -69,7 +61,7 @@ const getAllUsers = async () => {
  * Update Profile (S-1 Change Account Settings di UC-03)
  * Mengupdate informasi user seperti target kalori atau nama lengkap.
  */
-const updateUser = async (userId: number, updateData: any) => {
+export const updateUser = async (userId: number, updateData: any) => {
   return await prisma.users.update({
     where: { id: userId },
     data: updateData,
@@ -80,12 +72,4 @@ const updateUser = async (userId: number, updateData: any) => {
       daily_calorie_goal: true
     }
   });
-};
-
-module.exports = {
-  createUser,
-  findUserByEmail,
-  getUserProfile,
-  getAllUsers,
-  updateUser
 };

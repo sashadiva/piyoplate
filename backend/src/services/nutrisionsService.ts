@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
 
-const logNutrition = async (userId: number, recipeId: number, calories: number) => {
+export const logNutrition = async (userId: number, recipeId: number, calories: number) => {
   return await prisma.nutrition_logs.create({
     data: {
       user_id: userId,
@@ -15,7 +15,7 @@ const logNutrition = async (userId: number, recipeId: number, calories: number) 
   });
 };
 
-const getDailyLogs = async (userId: number) => {
+export const getDailyLogs = async (userId: number) => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
@@ -43,7 +43,7 @@ const getDailyLogs = async (userId: number) => {
 };
 
 
-const getDailySummary = async (userId: number) => {
+export const getDailySummary = async (userId: number) => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
@@ -74,18 +74,11 @@ const getDailySummary = async (userId: number) => {
 };
 
 
-const deleteLog = async (logId: number, userId: number) => {
+export const deleteLog = async (logId: number, userId: number) => {
   return await prisma.nutrition_logs.deleteMany({
     where: {
       id: logId,
       user_id: userId, // Memastikan user hanya bisa menghapus log miliknya sendiri
     },
   });
-};
-
-module.exports = {
-  logNutrition,
-  getDailyLogs,
-  getDailySummary,
-  deleteLog
 };
