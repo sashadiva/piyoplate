@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model users {
+  id             Int              @id @default(autoincrement())
+  username       String           @unique(map: "username") @db.VarChar(50)
+  email          String           @unique(map: "email") @db.VarChar(100)
+  password       String           @db.VarChar(255)
+  full_name      String?          @db.VarChar(100)
+  daily_calorie_goal Int          @default(2000) // Tambahan untuk target kalori harian
+  created_at     DateTime         @default(now()) @db.Timestamp(0)
+  updated_at     DateTime         @default(now()) @db.Timestamp(0)
+  role           users_role?      @default(user)
+  
+  // Relasi: Satu user bisa punya banyak resep dan log kalori
+  recipes        recipes[]
+  nutrition_logs nutrition_logs[]
+}
+
+model recipes {
+  id                   Int              @id @default(autoincrement())
+  author_id            Int              // Pembuat resep
+  title                String           @db.VarChar(100)
+  description          String?          @db.Text
+  calories_per_serving Int
+  cook_time_minutes    Int?
+  ingredients          String           @db.Text // Bisa disimpan dalam format JSON string
+  instructions         String           @db.Text
+  image_url            String?          @db.VarChar(255) // URL foto dari Cloud Storage
+  video_url            String?          @db.VarChar(255) // URL video dari Cloud Storage
+  created_at           DateTime         @default(now()) @db.Timestamp(0)
+  updated_at           DateTime         @default(now()) @db.Timestamp(0)
+
+  // Relasi: Resep ini milik siapa?
+  author               users            @relation(fields: [author_id], references: [id])
+  // Relasi: Resep ini dimasak/dicatat di log mana saja?
+  nutrition_logs       nutrition_logs[]
+}
+
+model nutrition_logs {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  recipe_id      Int
+  calories_added Int
+  logged_at      DateTime @default(now()) @db.Timestamp(0)
+
+  // Relasi ke User dan Recipe
+  user           users    @relation(fields: [user_id], references: [id])
+  recipe         recipes  @relation(fields: [recipe_id], references: [id])
+}
+
+enum users_role {
+  admin
+  user
+}
