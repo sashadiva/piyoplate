@@ -9,22 +9,27 @@ export class AuthService {
   constructor(private prisma: PrismaService) {}
 
   async register(data: RegisterDto) {
+    // 1. Cek apakah email sudah dipakai
     const existingUser = await this.prisma.users.findUnique({
       where: { email: data.email },
     });
 
     if (existingUser) {
-      throw new BadRequestException('Email Already Exists');
+      throw new BadRequestException('Email sudah terdaftar!');
     }
 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    // 2. Hash password (buat jadi kode rahasia)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(data.password, salt);
 
+    // 3. Simpan ke database
     return this.prisma.users.create({
       data: {
-        ...data,
+        username: data.username,
+        email: data.email,
         password: hashedPassword,
       },
-      select: { id: true, username: true, email: true }, // Jangan balikin password
+      select: { id: true, username: true, email: true } // Jangan kirim balik passwordnya
     });
   }
 
@@ -39,8 +44,7 @@ export class AuthService {
 
     return {
       message: 'Login Berhasil',
-      userId: user.id,
-      role: user.role,
+      user: { id: user.id, username: user.username }
     };
   }
 }

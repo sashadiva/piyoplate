@@ -1,60 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateRecipeDto } from './dto/create-recipe.dto';
 
 @Injectable()
 export class RecipesService {
-
   constructor(private prisma: PrismaService) {}
 
-  createRecipe = async (data: Prisma.recipesCreateInput) => {
-    return await this.prisma.recipes.create({ data });
-  };
+  async getAll(search?: string) {
+    return this.prisma.recipes.findMany({
+      where: search ? { title: { contains: search } } : {},
+      include: {
+        author: {
+          select: { username: true }
+        }
+      }
+    });
+  }
 
-  getAllRecipes = async () => {
-  return await this.prisma.recipes.findMany({
-    include: {
-      author: {
-        select: { username: true, full_name: true },
-      },
-    },
-    orderBy: { created_at: 'desc' }, 
-  });
-};
-  searchRecipes = async (query: string) => {
-  return await this.prisma.recipes.findMany({
-    where: {
-      OR: [
-        { title: { contains: query } },
-        { description: { contains: query } }
-      ]
-    },
-    include: {
-      author: { select: { username: true } }
-    }
-  });
-};
+  async getDetail(id: number) {
+    const recipe = await this.prisma.recipes.findUnique({
+      where: { id },
+      include: {
+        author: { select: { username: true } }
+      }
+    });
+    if (!recipe) throw new NotFoundException('Resep tidak ditemukan');
+    return recipe;
+  }
 
-// UC-07: View Recipe (Detail resep)
-  getRecipeById = async (id: number) => {
-  return await this.prisma.recipes.findUnique({
-    where: { id: id },
-    include: {
-      author: {
-        select: { 
-          username: true,
-          image_url: true // Untuk subflow S-5: View Poster's Profile
-        },
-      },
-    },
-  });
-};
-
-
-getRecipesByAuthor = async (authorId: number) => {
-  return await this.prisma.recipes.findMany({
-    where: { author_id: authorId },
-    orderBy: { created_at: 'desc' }
-  });
-}
+  async create(data: CreateRecipeDto) {
+    return this.prisma.recipes.create({
+      data: data
+    });
+  }
 }

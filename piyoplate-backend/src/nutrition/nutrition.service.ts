@@ -1,32 +1,50 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateLogDto } from './dto/create-log.dto';
 
 @Injectable()
 export class NutritionService {
-    constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async logDaily(data: any) {
-    return this.prisma.nutrition_logs.create({ data });
+  async addLog(data: CreateLogDto) {
+    return this.prisma.nutrition_logs.create({
+      data: {
+        user_id: data.user_id,
+        recipe_id: data.recipe_id,
+        calories_added: data.calories_added,
+      },
+    });
   }
 
-  async getSummary(userId: number) {
+  async getDailySummary(userId: number) {
+    // 1. Ambil target kalori user
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { daily_calorie_goal: true },
+    });
+
+    if (!user) throw new NotFoundException('User tidak ditemukan');
+
+    // 2. Hitung total kalori yang sudah dimakan hari ini
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const logs = await this.prisma.nutrition_logs.aggregate({
-      where: { user_id: userId, logged_at: { gte: today } },
-      _sum: { calories_added: true }
+      where: {
+        user_id: userId,
+        logged_at: { gte: today },
+      },
+      _sum: { calories_added: true },
     });
 
-    const user = await this.prisma.users.findUnique({
-      where: { id: userId },
-      select: { daily_calorie_goal: true }
-    });
+    const consumed = logs?._sum?.calories_added ?? 0;
+    const goal = user.daily_calorie_goal ?? 2000; // Default 2000 jika belum diatur
 
     return {
-      consumed: logs._sum.calories_added || 0,
-      goal: user.daily_calorie_goal,
-      remaining: user.daily_calorie_goal - (logs._sum.calories_added || 0)
+      daily_goal: goal,
+      total_consumed: consumed,
+      remaining_calories: goal - consumed,
+      status: consumed > goal ? 'Overlimit' : 'On Track',
     };
   }
 }
