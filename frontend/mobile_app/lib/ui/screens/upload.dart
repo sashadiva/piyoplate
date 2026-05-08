@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../data/services/apiServices.dart';
-import '../../core/theme.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
