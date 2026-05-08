@@ -1,4 +1,6 @@
-🥗 PiyoPlate Backend
+🥗 PiyoPlate
+
+#BACKEND  : 
 Backend API untuk aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan NestJS, Prisma ORM, dan PostgreSQL.
 🚀 Fitur Utama
 Auth: Register & Login dengan enkripsi password (Bcrypt).
