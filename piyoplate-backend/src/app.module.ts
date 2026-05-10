@@ -9,7 +9,7 @@ import { NutritionModule } from './nutrition/nutrition.module'
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // Tambahkan ini di paling atas!
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
     UsersModule,

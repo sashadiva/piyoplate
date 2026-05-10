@@ -11,7 +11,6 @@ export class UsersController {
     return this.usersService.findOne(+id);
   }
 
-  // UC-03: Update Profil (Misal ganti target kalori)
   @Patch('profile/:id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(+id, updateUserDto);
