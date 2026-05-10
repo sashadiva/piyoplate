@@ -33,9 +33,11 @@ $ npm install
 
 3. Konfigurasi Environment
 Buat file .env di root folder dan masukkan URL database : 
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/piyoplate?schema=public"
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/NAMA_DATABASE?schema=public"
 
-4. Setup Database (Prisma)
+-> ganti seluruh tulisan yang dalam bentuk CAPSLOCK (USER, PASSWORD, NAMA_DATABASE) sesuai dengan pengaturan database yang dimiliki.
+
+5. Setup Database (Prisma)
 
 ```bash
 $ npx prisma generate
