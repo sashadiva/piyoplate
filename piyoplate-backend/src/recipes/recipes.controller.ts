@@ -3,25 +3,27 @@ import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
 import {JwtAuthGuard} from '../auth/guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+@ApiTags('Recipes')
 @UseGuards(JwtAuthGuard)
 @Controller('recipes')
 export class RecipesController {
   constructor(private readonly recipesService: RecipesService) {}
 
-  // Ambil semua resep atau cari berdasarkan judul (?search=...)
+  @ApiOperation({ summary: 'Get all recipes with optional search' })
   @Get()
   findAll(@Query('search') search?: string) {
     return this.recipesService.getAll(search);
   }
 
-  // Lihat detail resep tertentu
+  @ApiOperation({ summary: 'Get details of a specific recipe' })
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.recipesService.getDetail(+id);
   }
 
-  // User posting resep baru
+  @ApiOperation({ summary: 'Create a new recipe' })
   @Post()
   create(@Body() createRecipeDto: CreateRecipeDto) {
     return this.recipesService.create(createRecipeDto);
