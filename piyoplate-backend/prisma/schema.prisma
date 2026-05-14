@@ -7,25 +7,30 @@ datasource db {
 }
 
 model users {
-  id             Int              @id @default(autoincrement())
-  username       String           @unique(map: "username") @db.VarChar(50)
-  email          String           @unique(map: "email") @db.VarChar(100)
-  password       String           @db.VarChar(255)
-  full_name      String?          @db.VarChar(100)
-  daily_calorie_goal Int          @default(2000) // Tambahan untuk target kalori harian
-  created_at     DateTime         @default(now()) @db.Timestamp(0)
-  updated_at     DateTime         @default(now()) @db.Timestamp(0)
-  role           users_role?      @default(user)
+id                  Int              @id @default(autoincrement())
+  username            String           @unique(map: "username") @db.VarChar(50)
+  email               String           @unique(map: "email") @db.VarChar(100)
+  password            String           @db.VarChar(255)
+  full_name           String?          @db.VarChar(100)
+  daily_calorie_goal  Int              @default(2000)
+  created_at          DateTime         @default(now()) @db.Timestamp(0)
+  updated_at          DateTime         @default(now()) @db.Timestamp(0)
+  role                users_role?      @default(user)
   
-  // Relasi: Satu user bisa punya banyak resep dan log kalori
-  recipes        recipes[]
-  nutrition_logs nutrition_logs[]
+  // Relasi yang sudah ada
+  recipes             recipes[]
+  nutrition_logs      nutrition_logs[]
+
+  // TAMBAHKAN DUA BARIS INI:
+  reviews             reviews[]
+  bookmarks           bookmarks[]
 }
 
 model recipes {
   id                   Int              @id @default(autoincrement())
   author_id            Int              // Pembuat resep
   title                String           @db.VarChar(100)
+  cuisine_type         String?          @db.VarChar(50) // Tambahan spek: jenis masakan
   description          String?          @db.Text
   calories_per_serving Int
   cook_time_minutes    Int?
@@ -35,26 +40,48 @@ model recipes {
   video_url            String?          @db.VarChar(255) // URL video dari Cloud Storage
   created_at           DateTime         @default(now()) @db.Timestamp(0)
   updated_at           DateTime         @default(now()) @db.Timestamp(0)
-
-  // Relasi: Resep ini milik siapa?
-  author               users            @relation(fields: [author_id], references: [id])
-  // Relasi: Resep ini dimasak/dicatat di log mana saja?
+  reviews              reviews[]
+  bookmarks            bookmarks[]
   nutrition_logs       nutrition_logs[]
+
+  author               users            @relation(fields: [author_id], references: [id])
 }
 
 model nutrition_logs {
   id             Int      @id @default(autoincrement())
   user_id        Int
-  recipe_id      Int
+  recipe_id      Int?     // Dibikin opsional (?) biar bisa "Quick Add"
+  food_name      String?  // Untuk fitur Quick Add (isi manual)
   calories_added Int
   logged_at      DateTime @default(now()) @db.Timestamp(0)
 
-  // Relasi ke User dan Recipe
   user           users    @relation(fields: [user_id], references: [id])
-  recipe         recipes  @relation(fields: [recipe_id], references: [id])
+  recipe         recipes? @relation(fields: [recipe_id], references: [id])
 }
 
 enum users_role {
   admin
   user
+}
+
+model reviews {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  recipe_id Int
+  rating    Int      // 1-5
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user      users    @relation(fields: [user_id], references: [id])
+  recipe    recipes  @relation(fields: [recipe_id], references: [id])
+}
+
+model bookmarks {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  recipe_id Int
+  createdAt DateTime @default(now())
+
+  user      users    @relation(fields: [user_id], references: [id])
+  recipe    recipes  @relation(fields: [recipe_id], references: [id])
 }

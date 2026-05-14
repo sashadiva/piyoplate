@@ -6,16 +6,27 @@ import { CreateLogDto } from './dto/create-log.dto';
 export class NutritionService {
   constructor(private prisma: PrismaService) {}
 
-  async addLog(data: CreateLogDto) {
+async addLog(data: CreateLogDto) {
     return this.prisma.nutrition_logs.create({
       data: {
         user_id: data.user_id,
-        recipe_id: data.recipe_id,
+        recipe_id: data.recipe_id ?? null,
+        food_name: data.food_name || null,
         calories_added: data.calories_added,
       },
     });
   }
 
+  async getHistory(userId: number) {
+    return this.prisma.nutrition_logs.findMany({
+      where: { user_id: userId },
+      orderBy: { logged_at: 'desc' },
+      take: 20, // Ambil 20 riwayat terakhir
+      include: {
+        recipe: { select: { title: true } }
+      }
+    });
+  }
   async getDailySummary(userId: number) {
     // 1. Ambil target kalori user
     const user = await this.prisma.users.findUnique({
@@ -47,4 +58,5 @@ export class NutritionService {
       status: consumed > goal ? 'Overlimit' : 'On Track',
     };
   }
+
 }

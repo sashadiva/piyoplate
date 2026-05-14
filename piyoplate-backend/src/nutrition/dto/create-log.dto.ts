@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateLogDto {
   @IsNumber()
@@ -6,8 +6,12 @@ export class CreateLogDto {
   user_id!: number;
 
   @IsNumber()
-  @IsNotEmpty()
-  recipe_id!: number;
+  @IsOptional() // Tambahkan ini
+  recipe_id?: number; // null jika Quick Add
+
+  @IsString()
+  @IsOptional() // Untuk simpan nama makanan manual
+  food_name?: string;
 
   @IsNumber()
   @IsNotEmpty()
