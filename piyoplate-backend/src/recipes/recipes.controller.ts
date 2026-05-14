@@ -1,15 +1,22 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Request } from '@nestjs/common';
 import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
 import {JwtAuthGuard} from '../auth/guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Recipes')
+@ApiBearerAuth('JWT-Auth')
 @UseGuards(JwtAuthGuard)
 @Controller('recipes')
 export class RecipesController {
   constructor(private readonly recipesService: RecipesService) {}
+
+@Post(':id/cook')
+@ApiOperation({ summary: 'Menjalankan aksi memasak resep dan menambah kalori otomatis' })
+async cook(@Request() req, @Param('id') recipeId: string) {
+  return this.recipesService.cookRecipe(req.user.userId, +recipeId);
+}
 
   @ApiOperation({ summary: 'Get all recipes with optional search' })
   @Get()

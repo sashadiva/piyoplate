@@ -10,25 +10,24 @@ export class AuthService {
   constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
   async register(data: RegisterDto) {
-    const existingUser = await this.prisma.users.findUnique({
-      where: { email: data.email },
-    });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(data.password, salt);
+    return this.prisma.$transaction(async (tx) => {
+
+    const existingUser = await this.prisma.users.findUnique({where: { email: data.email },});
 
     if (existingUser) {
       throw new BadRequestException('Email sudah terdaftar!');
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(data.password, salt);
-
-    // 3. Simpan ke database
-    return this.prisma.users.create({
-      data: {
-        username: data.username,
-        email: data.email,
-        password: hashedPassword,
-      },
-      select: { id: true, username: true, email: true } // Jangan kirim balik passwordnya
+    const user = await tx.users.create({
+        data: {
+          username: data.username,
+          email: data.email,
+          password: hashedPassword,
+        },
+      select: { id: true, username: true, email: true }
+    });
+    return { message: 'User berhasil didaftarkan', userId: user.id };
     });
   }
 

@@ -6,14 +6,21 @@ import { CreateLogDto } from '../dto/create-log.dto';
 export class NutritionService {
   constructor(private prisma: PrismaService) {}
 
-async addLog(data: CreateLogDto) {
-    return this.prisma.nutrition_logs.create({
-      data: {
-        user_id: data.user_id,
-        recipe_id: data.recipe_id ?? null,
-        food_name: data.food_name || null,
-        calories_added: data.calories_added,
-      },
+  async addLog(userId: number, dto: CreateLogDto) {
+    return this.prisma.$transaction(async (tx) => {
+      
+      const newLog = await tx.nutrition_logs.create({
+        data: {
+          user_id: userId,
+          recipe_id: dto.recipe_id ?? null,
+          food_name: dto.food_name ?? null,
+          calories_added: dto.calories_added, 
+        },
+      });
+      return {
+        message: "Log recorded successfully within transaction",
+        data: newLog
+      };
     });
   }
 
