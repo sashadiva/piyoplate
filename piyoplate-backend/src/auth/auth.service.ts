@@ -9,7 +9,6 @@ export class AuthService {
   constructor(private prisma: PrismaService) {}
 
   async register(data: RegisterDto) {
-    // 1. Cek apakah email sudah dipakai
     const existingUser = await this.prisma.users.findUnique({
       where: { email: data.email },
     });
@@ -18,7 +17,6 @@ export class AuthService {
       throw new BadRequestException('Email sudah terdaftar!');
     }
 
-    // 2. Hash password (buat jadi kode rahasia)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(data.password, salt);
 
