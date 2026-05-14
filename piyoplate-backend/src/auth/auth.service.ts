@@ -41,12 +41,14 @@ export class AuthService {
       throw new UnauthorizedException('Email atau password salah');
     }
 
-    const payload = { sub: user.id, username: user.username };
-    const token = this.jwtService.sign(payload);
-
+    const payload = { username: user.username, sub: user.id };
     return {
-      message: 'Login Berhasil',
-      user: { id: user.id, username: user.username }
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        username: user.username,
+        full_name: user.full_name
+      }
     };
   }
 }
