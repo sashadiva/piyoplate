@@ -1,18 +1,23 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateLogDto {
+  @ApiProperty({example: 1})
   @IsNumber()
   @IsNotEmpty()
   user_id!: number;
 
+  @ApiProperty({example: 1, required: false })
   @IsNumber()
-  @IsOptional() // Tambahkan ini
-  recipe_id?: number; // null jika Quick Add
+  @IsOptional()
+  recipe_id?: number;
 
+  @ApiProperty({example: 'Nasi Goreng', required: false })
   @IsString()
-  @IsOptional() // Untuk simpan nama makanan manual
+  @IsOptional()
   food_name?: string;
 
+  @ApiProperty({example: 500 })
   @IsNumber()
   @IsNotEmpty()
   calories_added!: number;
