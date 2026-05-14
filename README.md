@@ -2,12 +2,6 @@
   <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/6ec1c941-9d8b-4175-abae-155482b40c38 1.svg" width="120" alt="Piyoplate Logo" /></a>
 </p>
 
-# 🥗 PiyoPlate Back-End API
-
-<p align="center">
-  http://googleusercontent.com/image_generation_content/0
-</p>
-
 <p align="center">
   <strong>PiyoPlate</strong> — Solusi cerdas pelacak kalori dan berbagi resep sehat dalam satu genggaman.
   <br />
