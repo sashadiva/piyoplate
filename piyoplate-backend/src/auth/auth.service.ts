@@ -3,10 +3,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
   async register(data: RegisterDto) {
     const existingUser = await this.prisma.users.findUnique({
@@ -39,6 +40,9 @@ export class AuthService {
     if (!user || !(await bcrypt.compare(data.password, user.password))) {
       throw new UnauthorizedException('Email atau password salah');
     }
+
+    const payload = { sub: user.id, username: user.username };
+    const token = this.jwtService.sign(payload);
 
     return {
       message: 'Login Berhasil',
