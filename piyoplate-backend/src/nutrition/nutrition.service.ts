@@ -34,6 +34,7 @@ export class NutritionService {
       }
     });
   }
+  
   async getDailySummary(userId: number) {
     // 1. Ambil target kalori user
     const user = await this.prisma.users.findUnique({

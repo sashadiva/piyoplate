@@ -39,20 +39,46 @@ export class RecipesService {
     });
   }
 
-  async getDetail(id: number) {
-    const recipe = await this.prisma.recipes.findUnique({
-      where: { id },
-      include: {
-        author: { select: { username: true } }
+async getRecipeDetail(id: number) {
+  const recipe = await this.prisma.recipes.findUnique({
+    where: { id },
+    include: {
+      reviews: {
+        select: { rating: true }
       }
-    });
-    if (!recipe) throw new NotFoundException('Resep tidak ditemukan');
-    return recipe;
-  }
+    }
+  });
+
+  if (!recipe) throw new NotFoundException('Resep tidak ditemukan');
+  const reviews = recipe.reviews || [];
+  
+  const avgRating = reviews.length > 0 
+    ? reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length 
+    : 0;
+
+  return { 
+    ...recipe, 
+    avgRating: Number(avgRating.toFixed(1)) 
+  };
+}
 
   async create(data: CreateRecipeDto) {
     return this.prisma.recipes.create({
       data: data
     });
   }
+
+  async search(query: string) {
+    return this.prisma.recipes.findMany({
+      where: {
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { ingredients: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        _count: { select: { reviews: true } }, // Lihat jumlah review
+      }
+  });
+}
 }

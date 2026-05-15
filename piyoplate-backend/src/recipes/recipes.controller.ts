@@ -12,11 +12,11 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 export class RecipesController {
   constructor(private readonly recipesService: RecipesService) {}
 
-@Post(':id/cook')
-@ApiOperation({ summary: 'Menjalankan aksi memasak resep dan menambah kalori otomatis' })
-async cook(@Request() req, @Param('id') recipeId: string) {
-  return this.recipesService.cookRecipe(req.user.userId, +recipeId);
-}
+  @Post(':id/cook')
+  @ApiOperation({ summary: 'Menjalankan aksi memasak resep dan menambah kalori otomatis' })
+  async cook(@Request() req, @Param('id') recipeId: string) {
+    return this.recipesService.cookRecipe(req.user.userId, +recipeId);
+  }
 
   @ApiOperation({ summary: 'Get all recipes with optional search' })
   @Get()
@@ -27,7 +27,7 @@ async cook(@Request() req, @Param('id') recipeId: string) {
   @ApiOperation({ summary: 'Get details of a specific recipe' })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.recipesService.getDetail(+id);
+    return this.recipesService.getRecipeDetail(+id);
   }
 
   @ApiOperation({ summary: 'Create a new recipe' })
@@ -35,4 +35,11 @@ async cook(@Request() req, @Param('id') recipeId: string) {
   create(@Body() createRecipeDto: CreateRecipeDto) {
     return this.recipesService.create(createRecipeDto);
   }
+
+  @ApiOperation({ summary: 'Search for recipes' })
+  @Get('search')
+  search(@Query('q') query: string) {
+    return this.recipesService.search(query);
+  }
+
 }
