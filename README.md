@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/LogoPiyoPlate.png" width="120" alt="Piyoplate Logo" /></a>
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/LogoPiyoPlate.png" width="500" alt="Piyoplate Logo" /></a>
 </p>
 
 <p align="center">
