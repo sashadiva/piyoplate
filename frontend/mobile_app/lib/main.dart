@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Pastikan font ini terpasang jika ingin mirip
       ),
-      home: const LoginPage(),
+      home: const LoginScreen(),
     );
   }
 }
