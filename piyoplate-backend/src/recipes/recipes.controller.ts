@@ -6,7 +6,7 @@ import { UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Recipes')
-@ApiBearerAuth('JWT-Auth')
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('recipes')
 export class RecipesController {

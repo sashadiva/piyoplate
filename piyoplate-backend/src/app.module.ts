@@ -23,8 +23,4 @@ import { ReviewModule } from './review/review.module';
     ReviewModule,
   ],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerModule).forRoutes('*');
-  }
-}
+export class AppModule {}

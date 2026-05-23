@@ -1,9 +1,9 @@
 import { Controller } from '@nestjs/common';
-import { ApiTags } from 'node_modules/@nestjs/swagger/dist/decorators/api-use-tags.decorator';
 import { Post, Body, UseGuards, Request, Get, Param } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ReviewService } from './review.service';
+import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Review')
 @ApiBearerAuth('JWT-auth')

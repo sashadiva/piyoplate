@@ -7,7 +7,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth} from '@nestjs/swagger';
 
 @ApiTags('Nutrition')
 @UseGuards(JwtAuthGuard)
-@ApiBearerAuth('JWT-Auth')
+@ApiBearerAuth('JWT-auth')
 @Controller('nutrition')
 export class NutritionController {
   constructor(private readonly nutritionService: NutritionService) {}
