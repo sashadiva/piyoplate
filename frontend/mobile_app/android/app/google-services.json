@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "555250860137",
+    "project_id": "piyoplate",
+    "storage_bucket": "piyoplate.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555250860137:android:76f3856dfec1249cb522f8",
+        "android_client_info": {
+          "package_name": "com.example.mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5PjjBGFSNO3gWOjx5azBA-2LZnT18hZU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
