@@ -1,119 +1,101 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/ui/screens/home.dart';
-import '../../data/services/authServices.dart';
+import 'package:mobile_app/ui/screens/register.dart';
+import 'package:mobile_app/ui/widgets/mainButton.dart';
+import 'package:mobile_app/ui/widgets/customTextFields.dart';
+import 'package:mobile_app/ui/widgets/waveClipper.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  // Controller untuk ambil teks dari input
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
-  bool _isLoading = false;
-
-  void _handleLogin() async {
-    setState(() => _isLoading = true);
-
-    // Panggil mesin AuthService yang kita buat tadi
-    bool success = await _authService.login(
-      _emailController.text,
-      _passwordController.text,
-    );
-
-    setState(() => _isLoading = false);
-
-    if (success) {
-      // Kalau berhasil, pindah ke Home (kita buat Home nanti)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login Berhasil! Selamat datang di PiyoPlate'),
-        ),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
-    } else {
-      // Kalau gagal (salah password atau server mati)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login Gagal. Cek email/password atau koneksi server!'),
-        ),
-      );
-    }
-  }
-
+class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Logo atau Judul
-            const Text(
-              'PiyoPlate',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
+            Stack(
+              children: [
+                ClipPath(
+                  clipper: WaveClipper(),
+                  child: Container(height: 280, color: const Color(0xFFF5F5F5)),
+                ),
+                Positioned(
+                  bottom: 40,
+                  left: 0,
+                  right: 0,
+                  child: Image.asset('assets/images/logo.png', height: 140),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Lacak kalorimu, mulai hidup sehat!',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 48),
-
-            // Input Email
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Input Password
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.lock),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Tombol Login
-            ElevatedButton(
-              onPressed: _isLoading ? null : _handleLogin,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      'MASUK',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  const Text(
+                    "Hello,",
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  const Text(
+                    "Welcome Back!",
+                    style: TextStyle(fontSize: 24, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 30),
+                  const CustomTextField(label: "Email", hint: "Enter Email"),
+                  const CustomTextField(
+                    label: "Enter Password",
+                    hint: "Enter Password",
+                    isPassword: true,
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(color: Color(0xFFFF9830)),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  MainButton(
+                    text: "Log in",
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Don't have an account?"),
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterPage(),
+                          ),
+                        ),
+                        child: const Text(
+                          "Register",
+                          style: TextStyle(
+                            color: Color(0xFFFF9830),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
