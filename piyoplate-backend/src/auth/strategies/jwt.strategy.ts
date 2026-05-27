@@ -8,12 +8,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'PIYOPLATE_SECRET_2026',
+      secretOrKey: 'PakAnderiesSayangPiyoPlate2026',
     });
   }
 
   async validate(payload: any) {
-    // Data ini akan masuk ke request.user di controller
+    // Apa yang kamu return di sini akan jadi req.user
     return { userId: payload.sub, username: payload.username };
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_app/ui/screens/home.dart';
 import '../../data/services/authServices.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -32,6 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
         const SnackBar(
           content: Text('Login Berhasil! Selamat datang di PiyoPlate'),
         ),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } else {
       // Kalau gagal (salah password atau server mati)

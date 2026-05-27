@@ -27,19 +27,13 @@ export class RecipesController {
   @ApiOperation({ summary: 'Get details of a specific recipe' })
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.recipesService.getRecipeDetail(+id);
+    return this.recipesService.getRecipeDetail(Number(id));
   }
 
   @ApiOperation({ summary: 'Create a new recipe' })
   @Post()
   create(@Body() createRecipeDto: CreateRecipeDto) {
     return this.recipesService.create(createRecipeDto);
-  }
-
-  @ApiOperation({ summary: 'Search for recipes' })
-  @Get('search')
-  search(@Query('q') query: string) {
-    return this.recipesService.search(query);
   }
 
 }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
+import { error } from 'console';
 
 @Injectable()
 export class RecipesService {
@@ -28,16 +29,22 @@ export class RecipesService {
   });
 }
 
-  async getAll(search?: string) {
-    return this.prisma.recipes.findMany({
-      where: search ? { title: { contains: search } } : {},
-      include: {
-        author: {
-          select: { username: true }
-        }
-      }
-    });
-  }
+async getAll(search?: string) {
+  return this.prisma.recipes.findMany({
+    where: {
+      OR: search ? [
+        { title: { contains: search, mode: 'insensitive' } },
+        { ingredients: { contains: search, mode: 'insensitive' } },
+        { cuisine_type: { contains: search, mode: 'insensitive' } },
+      ] : undefined,
+    },
+    include: {
+      author: { select: { username: true } },
+      _count: { select: { reviews: true } }, // Sekalian buat nampilin jumlah review di list
+    },
+    orderBy: { created_at: 'desc' }, // Resep terbaru di atas
+  });
+}
 
 async getRecipeDetail(id: number) {
   const recipe = await this.prisma.recipes.findUnique({
@@ -68,17 +75,4 @@ async getRecipeDetail(id: number) {
     });
   }
 
-  async search(query: string) {
-    return this.prisma.recipes.findMany({
-      where: {
-        OR: [
-          { title: { contains: query, mode: 'insensitive' } },
-          { ingredients: { contains: query, mode: 'insensitive' } },
-        ],
-      },
-      include: {
-        _count: { select: { reviews: true } }, // Lihat jumlah review
-      }
-  });
-}
 }
