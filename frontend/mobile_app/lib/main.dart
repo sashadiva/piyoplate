@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/ui/screens/login.dart';
-// import 'package:mobile_app/viewRecipe.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +17,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.orange,
         fontFamily: 'Poppins', // Pastikan font ini terpasang jika ingin mirip
       ),
-      home: const LoginPage(),
+      home: LoginScreen(onNavigateToRegister: () {}),
     );
   }
 }

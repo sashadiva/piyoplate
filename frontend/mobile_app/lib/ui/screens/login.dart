@@ -1,103 +1,162 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_app/ui/screens/home.dart';
-import 'package:mobile_app/ui/screens/register.dart';
-import 'package:mobile_app/ui/widgets/mainButton.dart';
-import 'package:mobile_app/ui/widgets/customTextFields.dart';
-import 'package:mobile_app/ui/widgets/waveClipper.dart';
+import 'package:provider/provider.dart';
+import '../../data/services/authProvider.dart';
+import '../../core/theme.dart';
+import '../../ui/widgets/mainButton.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class LoginScreen extends StatefulWidget {
+  final VoidCallback onNavigateToRegister;
+  const LoginScreen({super.key, required this.onNavigateToRegister});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.login(_emailCtrl.text.trim(), _passCtrl.text);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(auth.error ?? 'Login gagal'),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                ClipPath(
-                  clipper: WaveClipper(),
-                  child: Container(height: 280, color: const Color(0xFFF5F5F5)),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 40),
+              // Logo area
+              Center(
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.restaurant_menu_rounded,
+                    size: 40,
+                    color: AppColors.primary,
+                  ),
                 ),
-                Positioned(
-                  bottom: 40,
-                  left: 0,
-                  right: 0,
-                  child: Image.asset('assets/images/logo.png', height: 140),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  const Text(
-                    "Hello,",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  const Text(
-                    "Welcome Back!",
-                    style: TextStyle(fontSize: 24, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 30),
-                  const CustomTextField(label: "Email", hint: "Enter Email"),
-                  const CustomTextField(
-                    label: "Enter Password",
-                    hint: "Enter Password",
-                    isPassword: true,
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        "Forgot Password?",
-                        style: TextStyle(color: Color(0xFFFF9830)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  MainButton(
-                    text: "Log in",
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Don't have an account?"),
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
-                          ),
-                        ),
-                        child: const Text(
-                          "Register",
-                          style: TextStyle(
-                            color: Color(0xFFFF9830),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              const Center(
+                child: Text(
+                  'PiyoPlate',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const Center(
+                child: Text(
+                  'Masak sehat, hidup sehat 🌿',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              const Text(
+                'Masuk ke akunmu',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email_outlined, size: 20),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passCtrl,
+                obscureText: _obscure,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                    icon: Icon(
+                      _obscure
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                onSubmitted: (_) => _login(),
+              ),
+              const SizedBox(height: 24),
+              Consumer<AuthProvider>(
+                builder: (_, auth, __) => MainButton(
+                  text: 'Masuk',
+                  onPressed: _login,
+                  isLoading: auth.isLoading,
+                  icon: Icons.login_rounded,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: GestureDetector(
+                  onTap: widget.onNavigateToRegister,
+                  child: RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                        fontFamily: 'Poppins',
+                      ),
+                      children: [
+                        TextSpan(text: 'Belum punya akun? '),
+                        TextSpan(
+                          text: 'Daftar sekarang',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
