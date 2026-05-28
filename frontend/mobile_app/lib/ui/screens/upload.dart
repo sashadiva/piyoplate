@@ -55,16 +55,7 @@
 //     setState(() => _isLoading = true);
 
 //     try {
-//       final success = await _apiService.uploadRecipe(
-//         authorId: 1, // Sementara hardcode ID User (nanti ambil dari data login)
-//         title: _titleController.text,
-//         description: _descController.text,
-//         calories: int.parse(_calorieController.text),
-//         cookTime: int.parse(_timeController.text),
-//         ingredients: _ingredientController.text,
-//         instructions: _instructionController.text,
-//         imageFile: _selectedImage!,
-//       );
+//       final success = await ApiService.createRecipe();
 
 //       if (success) {
 //         if (mounted) {
