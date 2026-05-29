@@ -8,12 +8,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: 'PakAnderiesSayangPiyoPlate2026',
+      secretOrKey: process.env.JWT_SECRET || 'PakAnderiesSayangPiyoPlate2026',
     });
   }
 
   async validate(payload: any) {
-    // Apa yang kamu return di sini akan jadi req.user
     return { userId: payload.sub, username: payload.username };
   }
 }

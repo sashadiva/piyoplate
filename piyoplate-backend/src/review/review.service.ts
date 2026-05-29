@@ -1,11 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateReviewDto } from '../dto/create-review.dto';
 
 @Injectable()
 export class ReviewService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async createReview(userId: number, dto: { recipe_id: number, rating: number, comment?: string }) {
+  async createReview(userId: number, dto: CreateReviewDto) {
+    // Cek resep ada
+    const recipe = await this.prisma.recipes.findUnique({
+      where: { id: dto.recipe_id },
+    });
+    if (!recipe) throw new NotFoundException('Resep tidak ditemukan');
+
     return this.prisma.reviews.create({
       data: {
         user_id: userId,
@@ -13,7 +20,9 @@ export class ReviewService {
         rating: dto.rating,
         comment: dto.comment,
       },
-      include: { user: { select: { username: true } } } // Balikin nama usernya buat di UI
+      include: {
+        user: { select: { id: true, username: true } },
+      },
     });
   }
 
@@ -21,7 +30,9 @@ export class ReviewService {
     return this.prisma.reviews.findMany({
       where: { recipe_id: recipeId },
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { username: true } } }
+      include: {
+        user: { select: { id: true, username: true, profile_picture_url: true } },
+      },
     });
   }
 }

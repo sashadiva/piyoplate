@@ -7,57 +7,23 @@ datasource db {
 }
 
 model users {
-id                  Int              @id @default(autoincrement())
-  username            String           @unique(map: "username") @db.VarChar(50)
-  email               String           @unique(map: "email") @db.VarChar(100)
-  password            String           @db.VarChar(255)
-  full_name           String?          @db.VarChar(100)
-  daily_calorie_goal  Int              @default(2000)
-  created_at          DateTime         @default(now()) @db.Timestamp(0)
-  updated_at          DateTime         @default(now()) @db.Timestamp(0)
-  role                users_role?      @default(user)
-
-  daily_calorie_target  Int      @default(2000) // Default rata-rata manusia
-  weight                Float?   // Dalam kg
-  height                Float?   // Dalam cm
-
-  recipes             recipes[]
-  nutrition_logs      nutrition_logs[]
-  reviews             reviews[]
-  bookmarks           bookmarks[]
-}
-
-model recipes {
   id                   Int              @id @default(autoincrement())
-  author_id            Int              // Pembuat resep
-  title                String           @db.VarChar(100)
-  cuisine_type         String?          @db.VarChar(50) // Tambahan spek: jenis masakan
-  description          String?          @db.Text
-  calories_per_serving Int
-  cook_time_minutes    Int?
-  ingredients          String           @db.Text // Bisa disimpan dalam format JSON string
-  instructions         String           @db.Text
-  image_url            String?          @db.VarChar(255) // URL foto dari Cloud Storage
-  video_url            String?          @db.VarChar(255) // URL video dari Cloud Storage
+  username             String           @unique(map: "username") @db.VarChar(50)
+  email                String           @unique(map: "email") @db.VarChar(100)
+  password             String           @db.VarChar(255)
+  full_name            String?          @db.VarChar(100)
+  profile_picture_url  String?          @db.VarChar(255)
+  daily_calorie_goal   Int              @default(2000)
+  weight               Float?
+  height               Float?
+  role                 users_role       @default(user)
   created_at           DateTime         @default(now()) @db.Timestamp(0)
   updated_at           DateTime         @default(now()) @db.Timestamp(0)
+
+  recipes              recipes[]
+  nutrition_logs       nutrition_logs[]
   reviews              reviews[]
   bookmarks            bookmarks[]
-  nutrition_logs       nutrition_logs[]
-
-  author               users            @relation(fields: [author_id], references: [id])
-}
-
-model nutrition_logs {
-  id             Int      @id @default(autoincrement())
-  user_id        Int
-  recipe_id      Int?     // Dibikin opsional (?) biar bisa "Quick Add"
-  food_name      String?  // Untuk fitur Quick Add (isi manual)
-  calories_added Int
-  logged_at      DateTime @default(now()) @db.Timestamp(0)
-
-  user           users    @relation(fields: [user_id], references: [id])
-  recipe         recipes? @relation(fields: [recipe_id], references: [id])
 }
 
 enum users_role {
@@ -65,11 +31,44 @@ enum users_role {
   user
 }
 
+model recipes {
+  id                   Int              @id @default(autoincrement())
+  author_id            Int
+  title                String           @db.VarChar(100)
+  cuisine_type         String?          @db.VarChar(50)
+  description          String?          @db.Text
+  calories_per_serving Int
+  cook_time_minutes    Int?
+  ingredients          String           @db.Text
+  instructions         String           @db.Text
+  image_url            String?          @db.VarChar(255)
+  video_url            String?          @db.VarChar(255)
+  created_at           DateTime         @default(now()) @db.Timestamp(0)
+  updated_at           DateTime         @default(now()) @db.Timestamp(0)
+
+  author               users            @relation(fields: [author_id], references: [id])
+  reviews              reviews[]
+  bookmarks            bookmarks[]
+  nutrition_logs       nutrition_logs[]
+}
+
+model nutrition_logs {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  recipe_id      Int?
+  food_name      String?
+  calories_added Int
+  logged_at      DateTime @default(now()) @db.Timestamp(0)
+
+  user           users    @relation(fields: [user_id], references: [id])
+  recipe         recipes? @relation(fields: [recipe_id], references: [id])
+}
+
 model reviews {
   id        Int      @id @default(autoincrement())
   user_id   Int
   recipe_id Int
-  rating    Int      // 1-5
+  rating    Int
   comment   String?  @db.Text
   createdAt DateTime @default(now())
 
@@ -85,4 +84,6 @@ model bookmarks {
 
   user      users    @relation(fields: [user_id], references: [id])
   recipe    recipes  @relation(fields: [recipe_id], references: [id])
+
+  @@unique([user_id, recipe_id])
 }

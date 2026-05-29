@@ -1,28 +1,25 @@
-import { Controller } from '@nestjs/common';
-import { Post, Body, UseGuards, Request, Get, Param } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import {  Controller,  Post,  Get,  Body,  Param,  Request,  UseGuards,  ParseIntPipe} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ReviewService } from './review.service';
-import { ApiTags } from '@nestjs/swagger';
+import { CreateReviewDto } from '../dto/create-review.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Review')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('review')
 export class ReviewController {
-  constructor(private readonly reviewsService: ReviewService) {}
+  constructor(private readonly reviewService: ReviewService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Kasih rating dan review ke resep' })
-  create(@Request() req, @Body() dto: { recipe_id: number, rating: number, comment?: string }) {
-    return this.reviewsService.createReview(req.user.userId, dto);
+  @ApiOperation({ summary: 'Beri rating dan review ke resep' })
+  create(@Request() req, @Body() dto: CreateReviewDto) {
+    return this.reviewService.createReview(req.user.userId, dto);
   }
 
   @Get('recipe/:id')
   @ApiOperation({ summary: 'Lihat semua review di satu resep' })
-  getByRecipe(@Param('id') recipeId: string) {
-    return this.reviewsService.getRecipeReviews(+recipeId);
+  getByRecipe(@Param('id', ParseIntPipe) recipeId: number) {
+    return this.reviewService.getRecipeReviews(recipeId);
   }
 }

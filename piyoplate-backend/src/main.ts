@@ -1,14 +1,27 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true, 
+      forbidNonWhitelisted: false,
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('PiyoPlate API')
-    .setDescription('Aplikasi PiyoPlate')
+    .setDescription('Backend API untuk aplikasi resep & kalori tracker PiyoPlate')
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -16,7 +29,7 @@ async function bootstrap() {
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT',
-        description: 'Masukkan Token JWT kamu',
+        description: 'Masukkan access_token dari response login',
         in: 'header',
       },
       'JWT-auth',
@@ -26,8 +39,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.enableCors();
-  await app.listen(3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`🚀 PiyoPlate API running on http://localhost:${port}`);
+  console.log(`📖 Swagger docs: http://localhost:${port}/api`);
 }
+
 bootstrap();

@@ -1,14 +1,12 @@
-import 'dotenv/config';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config'; 
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { RecipesModule } from './recipes/recipes.module';
-import { NutritionModule } from './nutrition/nutrition.module'
-import { LoggerModule } from './logger/logger.module';
-import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { NutritionModule } from './nutrition/nutrition.module';
 import { ReviewModule } from './review/review.module';
+import { BookmarksModule } from './bookmarks/bookmarks.module';
 
 @Module({
   imports: [
@@ -18,9 +16,8 @@ import { ReviewModule } from './review/review.module';
     UsersModule,
     RecipesModule,
     NutritionModule,
-    LoggerModule,
-    BookmarksModule,
     ReviewModule,
+    BookmarksModule,
   ],
 })
 export class AppModule {}
