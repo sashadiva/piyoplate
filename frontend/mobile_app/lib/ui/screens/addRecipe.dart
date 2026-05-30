@@ -37,7 +37,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     'Dessert',
     'Lainnya',
   ];
-  final _units = ['gr', 'kg', 'sdm', 'sdt', 'ml', 'L', 'buah', 'secukupnya'];
+  final _units = ['gr', 'kg', 'sdm', 'sdt', 'ml', 'L', 'buah', 'butir', 'secukupnya'];
 
   @override
   void dispose() {
@@ -402,7 +402,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                     ],
                   ),
                 ),
-
+                const SizedBox(height: 20),
                 // Publish button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
@@ -612,15 +612,9 @@ class _IngredientRow extends StatelessWidget {
           width: 88,
           child: DropdownButtonFormField<String>(
             value: item.unit,
-            isDense: true,
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 12,
-              ),
-            ),
+            isExpanded: true,
             items: units
-                .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                .map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 13))))
                 .toList(),
             onChanged: (v) {
               if (v != null) onUnitChanged(v);
@@ -729,7 +723,7 @@ class _AddRowButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           border: Border.all(
-            color: AppColors.primary,
+            color: AppColors.primaryDark,
             style: BorderStyle.solid,
             width: 0.5,
           ),
@@ -739,13 +733,13 @@ class _AddRowButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add, color: AppColors.primary, size: 18),
+            const Icon(Icons.add, color: AppColors.primaryDark, size: 18),
             const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 13,
-                color: AppColors.primary,
+                color: AppColors.primaryDark,
                 fontWeight: FontWeight.w500,
               ),
             ),

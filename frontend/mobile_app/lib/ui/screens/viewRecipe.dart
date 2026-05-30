@@ -398,7 +398,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           ),
           // Tab content
           SliverFillRemaining(
-            hasScrollBody: false,
             child: TabBarView(
               controller: _tabCtrl,
               children: [
@@ -572,81 +571,83 @@ class _ReviewsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          MainButton(
-            text: 'Tulis ulasan',
-            onPressed: onAddReview,
-            icon: Icons.rate_review_outlined,
-          ),
-          const SizedBox(height: 16),
-          if (!loaded)
-            const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
-          else if (reviews.isEmpty)
-            const EmptyState(
-              icon: Icons.chat_bubble_outline,
-              title: 'Belum ada ulasan',
-              subtitle: 'Jadilah yang pertama memberi ulasan!',
-            )
-          else
-            ...reviews.map(
-              (r) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            MainButton(
+              text: 'Tulis ulasan',
+              onPressed: onAddReview,
+              icon: Icons.rate_review_outlined,
+            ),
+            const SizedBox(height: 16),
+            if (!loaded)
+              const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              )
+            else if (reviews.isEmpty)
+              const EmptyState(
+                icon: Icons.chat_bubble_outline,
+                title: 'Belum ada ulasan',
+                subtitle: 'Jadilah yang pertama memberi ulasan!',
+              )
+            else
+              ...reviews.map(
+                (r) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              r.username,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            Row(
+                              children: List.generate(
+                                5,
+                                (i) => Icon(
+                                  i < r.rating
+                                      ? Icons.star_rounded
+                                      : Icons.star_outline_rounded,
+                                  color: AppColors.amber,
+                                  size: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (r.comment != null && r.comment!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
                           Text(
-                            r.username,
+                            r.comment!,
                             style: const TextStyle(
                               fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Row(
-                            children: List.generate(
-                              5,
-                              (i) => Icon(
-                                i < r.rating
-                                    ? Icons.star_rounded
-                                    : Icons.star_outline_rounded,
-                                color: AppColors.amber,
-                                size: 14,
-                              ),
+                              color: AppColors.textSecondary,
+                              height: 1.4,
                             ),
                           ),
                         ],
-                      ),
-                      if (r.comment != null && r.comment!.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          r.comment!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                            height: 1.4,
-                          ),
-                        ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
-      ),
+          ],
+        ),
+      )
     );
   }
 }
