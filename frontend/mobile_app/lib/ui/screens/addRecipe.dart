@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
 import '../../data/services/authProvider.dart';
 import '../../core/theme.dart';
-import '../../ui/widgets/MainButton.dart';
+import '../widgets/mainButton.dart';
 
 class AddRecipeScreen extends StatefulWidget {
   const AddRecipeScreen({super.key});
@@ -37,7 +37,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     'Dessert',
     'Lainnya',
   ];
-  final _units = ['gr', 'kg', 'sdm', 'sdt', 'ml', 'L', 'buah', 'butir', 'secukupnya'];
+  final _units = ['gr', 'kg', 'sdm', 'sdt', 'ml', 'L', 'buah', 'secukupnya'];
 
   @override
   void dispose() {
@@ -141,9 +141,15 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
       _showError('Isi minimal 1 langkah memasak');
       return false;
     }
-    if (_calMode == 'manual' && (int.tryParse(_kcalCtrl.text.trim()) == null)) {
+    if (_calMode == 'manual' && int.tryParse(_kcalCtrl.text.trim()) == null) {
       _showError('Masukkan kalori yang valid');
       return false;
+    }
+    // Mode AI: kalori boleh kosong (backend yang hitung), atau sudah diisi dari preview
+    if (_calMode == 'ai' &&
+        _aiResult == null &&
+        _kcalCtrl.text.trim().isEmpty) {
+      // Boleh lanjut — backend akan hitung sendiri
     }
     return true;
   }
@@ -158,11 +164,55 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     );
   }
 
+  // Hasil estimasi AI yang sudah di-preview (opsional)
+  AiCalorieResult? _aiResult;
+
+  /// Panggil Gemini API untuk preview estimasi kalori SEBELUM publish.
+  /// User bisa lihat breakdown dan koreksi kalau perlu.
+  Future<void> _previewAiCalories() async {
+    final ingrStr = _ingredients
+        .where((i) => i.name.isNotEmpty)
+        .map((i) => '${i.name}${i.qty.isNotEmpty ? ' ${i.qty} ${i.unit}' : ''}')
+        .join(', ');
+
+    if (ingrStr.isEmpty || _titleCtrl.text.trim().isEmpty) {
+      _showError('Isi nama resep dan bahan dulu sebelum generate AI');
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      final res = await ApiService.estimateCaloriesAI(
+        title: _titleCtrl.text.trim(),
+        ingredients: ingrStr,
+        servings: 1,
+      );
+      final result = AiCalorieResult.fromJson(res);
+      setState(() {
+        _aiResult = result;
+        _kcalCtrl.text = '${result.caloriesPerServing}';
+        _submitting = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'AI estimasi: ${result.caloriesPerServing} kkal/porsi ✨',
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _submitting = false);
+      _showError(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
   Future<void> _publish() async {
     if (!_validate()) return;
     setState(() => _submitting = true);
-
-    final user = context.read<AuthProvider>().user!;
 
     final ingrStr = _ingredients
         .where((i) => i.name.isNotEmpty)
@@ -174,9 +224,11 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         .where((s) => s.isNotEmpty)
         .join('. ');
 
-    final kcal = _calMode == 'manual'
-        ? int.parse(_kcalCtrl.text.trim())
-        : _estimateCalories();
+    // Kalori: pakai nilai di field (bisa dari manual atau sudah diisi AI preview)
+    // use_ai_calories=true hanya jika mode AI tapi belum di-preview
+    final kcalText = _kcalCtrl.text.trim();
+    final kcalManual = int.tryParse(kcalText);
+    final useAi = _calMode == 'ai' && kcalManual == null;
 
     try {
       await ApiService.createRecipe({
@@ -184,10 +236,11 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         'cuisine_type': _cuisineType,
         'ingredients': ingrStr,
         'instructions': stepsStr,
-        'calories_per_serving': kcal,
-        'cooking_duration_minutes':
-            int.tryParse(_durationCtrl.text.trim()) ?? 0,
-        'author_id': user.id,
+        'calories_per_serving': kcalManual ?? 0,
+        'cook_time_minutes': int.tryParse(_durationCtrl.text.trim()) ?? 0,
+        'use_ai_calories': useAi,
+        'servings': 1,
+        if (_image != null) 'image_url': '',
       });
 
       if (mounted) {
@@ -205,33 +258,6 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     } finally {
       setState(() => _submitting = false);
     }
-  }
-
-  /// Simple local calorie estimator based on common Indonesian ingredients
-  int _estimateCalories() {
-    int est = 0;
-    for (final i in _ingredients) {
-      final n = i.name.toLowerCase();
-      if (n.contains('nasi') || n.contains('rice'))
-        est += 180;
-      else if (n.contains('ayam') || n.contains('chicken'))
-        est += 165;
-      else if (n.contains('daging') || n.contains('beef'))
-        est += 250;
-      else if (n.contains('tahu'))
-        est += 80;
-      else if (n.contains('tempe'))
-        est += 160;
-      else if (n.contains('telur') || n.contains('egg'))
-        est += 70;
-      else if (n.contains('minyak') || n.contains('oil'))
-        est += 120;
-      else if (n.contains('santan'))
-        est += 90;
-      else
-        est += 30;
-    }
-    return est.clamp(50, 2000);
   }
 
   void _resetForm() {
@@ -372,37 +398,117 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                           hint: 'Cth: 450',
                           type: TextInputType.number,
                         )
-                      else
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: AppColors.primary,
-                                size: 18,
+                      else ...[
+                        // Tombol generate AI
+                        GestureDetector(
+                          onTap: _submitting ? null : _previewAiCalories,
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: AppColors.primary.withOpacity(0.3),
                               ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'AI akan menghitung kalori dari bahan-bahan yang kamu input saat publish 🤖',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.primaryDark,
+                            ),
+                            child: Row(
+                              children: [
+                                _submitting
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.primary,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.auto_awesome,
+                                        color: AppColors.primary,
+                                        size: 18,
+                                      ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _submitting
+                                        ? 'AI sedang menghitung...'
+                                        : 'Tap untuk generate estimasi kalori dari bahan ✨',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.primaryDark,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
+                        // Tampilkan hasil AI preview
+                        if (_aiResult != null) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: AppColors.primary,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${_aiResult!.caloriesPerServing} kkal/porsi',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _aiResult!.breakdown,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                if (_aiResult!.notes.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _aiResult!.notes,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textTertiary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          // Field kalori bisa dikoreksi manual
+                          _field(
+                            _kcalCtrl,
+                            'Koreksi kalori jika perlu',
+                            hint: '${_aiResult!.caloriesPerServing}',
+                            type: TextInputType.number,
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+
                 // Publish button
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
@@ -612,9 +718,15 @@ class _IngredientRow extends StatelessWidget {
           width: 88,
           child: DropdownButtonFormField<String>(
             value: item.unit,
-            isExpanded: true,
+            isDense: true,
+            decoration: const InputDecoration(
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 12,
+              ),
+            ),
             items: units
-                .map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 13))))
+                .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                 .toList(),
             onChanged: (v) {
               if (v != null) onUnitChanged(v);
@@ -723,7 +835,7 @@ class _AddRowButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           border: Border.all(
-            color: AppColors.primaryDark,
+            color: AppColors.primary,
             style: BorderStyle.solid,
             width: 0.5,
           ),
@@ -733,13 +845,13 @@ class _AddRowButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.add, color: AppColors.primaryDark, size: 18),
+            const Icon(Icons.add, color: AppColors.primary, size: 18),
             const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 13,
-                color: AppColors.primaryDark,
+                color: AppColors.primary,
                 fontWeight: FontWeight.w500,
               ),
             ),

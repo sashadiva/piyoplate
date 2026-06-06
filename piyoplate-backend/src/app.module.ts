@@ -7,6 +7,7 @@ import { RecipesModule } from './recipes/recipes.module';
 import { NutritionModule } from './nutrition/nutrition.module';
 import { ReviewModule } from './review/review.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     NutritionModule,
     ReviewModule,
     BookmarksModule,
+    AiModule,
   ],
 })
 export class AppModule {}

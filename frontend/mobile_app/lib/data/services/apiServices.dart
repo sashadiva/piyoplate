@@ -1,12 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../data/models/model.dart';
 import '../../core/constants.dart';
+import '../models/model.dart';
 
 class ApiService {
   static const String baseUrl = AppConstants.baseUrl;
 
+  // ── Token & User Storage ──────────────────────────────
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
@@ -43,7 +45,19 @@ class ApiService {
     };
   }
 
+  /// Parse error message dari response backend NestJS
+  static String _parseError(http.Response res, String fallback) {
+    try {
+      final body = jsonDecode(res.body);
+      final msg = body['message'];
+      if (msg is List) return msg.join(', ');
+      if (msg is String) return msg;
+    } catch (_) {}
+    return fallback;
+  }
+
   // ── Auth ──────────────────────────────────────────────
+
   static Future<Map<String, dynamic>> register({
     required String username,
     required String email,
@@ -60,7 +74,7 @@ class ApiService {
     );
     final data = jsonDecode(res.body);
     if (res.statusCode != 201 && res.statusCode != 200) {
-      throw Exception(data['message'] ?? 'Registrasi gagal');
+      throw Exception(_parseError(res, 'Registrasi gagal'));
     }
     return data;
   }
@@ -74,21 +88,24 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
-    final data = jsonDecode(res.body);
     if (res.statusCode != 200 && res.statusCode != 201) {
-      throw Exception(data['message'] ?? 'Login gagal');
+      throw Exception(_parseError(res, 'Login gagal'));
     }
+    final data = jsonDecode(res.body);
     await saveToken(data['access_token']);
     await saveUser(data['user']);
     return data;
   }
 
   // ── Recipes ───────────────────────────────────────────
+
   static Future<List<Recipe>> getRecipes({String? search}) async {
     final headers = await _authHeaders();
-    final uri = Uri.parse(
-      '$baseUrl/recipes',
-    ).replace(queryParameters: search != null ? {'search': search} : null);
+    final uri = Uri.parse('$baseUrl/recipes').replace(
+      queryParameters: search != null && search.isNotEmpty
+          ? {'search': search}
+          : null,
+    );
     final res = await http.get(uri, headers: headers);
     if (res.statusCode != 200) throw Exception('Gagal mengambil resep');
     final List data = jsonDecode(res.body);
@@ -115,7 +132,30 @@ class ApiService {
       body: jsonEncode(data),
     );
     if (res.statusCode != 201 && res.statusCode != 200) {
-      throw Exception('Gagal membuat resep');
+      throw Exception(_parseError(res, 'Gagal membuat resep'));
+    }
+    return jsonDecode(res.body);
+  }
+
+  /// Preview estimasi kalori dari AI sebelum simpan resep.
+  /// Dipanggil saat user pencet "Generate AI ✨" di form buat resep.
+  static Future<Map<String, dynamic>> estimateCaloriesAI({
+    required String title,
+    required String ingredients,
+    int servings = 1,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      Uri.parse('$baseUrl/recipes/ai/estimate-calories'),
+      headers: headers,
+      body: jsonEncode({
+        'title': title,
+        'ingredients': ingredients,
+        'servings': servings,
+      }),
+    );
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception(_parseError(res, 'Gagal estimasi kalori'));
     }
     return jsonDecode(res.body);
   }
@@ -127,12 +167,13 @@ class ApiService {
       headers: headers,
     );
     if (res.statusCode != 200 && res.statusCode != 201) {
-      throw Exception('Gagal memasak resep');
+      throw Exception(_parseError(res, 'Gagal memasak resep'));
     }
     return jsonDecode(res.body);
   }
 
   // ── Nutrition ─────────────────────────────────────────
+
   static Future<DailySummary> getDailySummary(int userId) async {
     final headers = await _authHeaders();
     final res = await http.get(
@@ -154,28 +195,140 @@ class ApiService {
     return data.map((e) => NutritionLog.fromJson(e)).toList();
   }
 
-  static Future<Map<String, dynamic>> addNutritionLog({
-    int? recipeId,
-    String? foodName,
+  static Future<List<WeeklyData>> getWeeklyData(int userId) async {
+    final headers = await _authHeaders();
+    final res = await http.get(
+      Uri.parse('$baseUrl/nutrition/weekly/$userId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception('Gagal mengambil data mingguan');
+    final List data = jsonDecode(res.body);
+    return data.map((e) => WeeklyData.fromJson(e)).toList();
+  }
+
+  static Future<Map<String, dynamic>> getMonthlySummary(int userId) async {
+    final headers = await _authHeaders();
+    final res = await http.get(
+      Uri.parse('$baseUrl/nutrition/monthly/$userId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception('Gagal mengambil data bulanan');
+    return jsonDecode(res.body);
+  }
+
+  /// Log kalori MANUAL — user input nama + kalori sendiri
+  static Future<Map<String, dynamic>> logManual({
+    required String foodName,
     required int caloriesAdded,
+    int? recipeId,
   }) async {
     final headers = await _authHeaders();
     final res = await http.post(
-      Uri.parse('$baseUrl/nutrition/log'),
+      Uri.parse('$baseUrl/nutrition/log/manual'),
       headers: headers,
       body: jsonEncode({
-        if (recipeId != null) 'recipe_id': recipeId,
-        if (foodName != null) 'food_name': foodName,
+        'food_name': foodName,
         'calories_added': caloriesAdded,
+        if (recipeId != null) 'recipe_id': recipeId,
       }),
     );
     if (res.statusCode != 200 && res.statusCode != 201) {
-      throw Exception('Gagal menambah log');
+      throw Exception(_parseError(res, 'Gagal menambah log'));
     }
     return jsonDecode(res.body);
   }
 
+  /// Log kalori dari FOTO — kirim File, diconvert ke base64 di sini
+  static Future<Map<String, dynamic>> logFromPhoto({
+    required File imageFile,
+    String? portionNote,
+  }) async {
+    final headers = await _authHeaders();
+
+    // Convert file ke base64
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+
+    // Deteksi media type dari ekstensi
+    final ext = imageFile.path.split('.').last.toLowerCase();
+    final mediaType = ext == 'png'
+        ? 'image/png'
+        : ext == 'webp'
+        ? 'image/webp'
+        : 'image/jpeg';
+
+    final res = await http.post(
+      Uri.parse('$baseUrl/nutrition/log/photo'),
+      headers: headers,
+      body: jsonEncode({
+        'image_base64': base64Image,
+        'media_type': mediaType,
+        if (portionNote != null && portionNote.isNotEmpty)
+          'portion_note': portionNote,
+      }),
+    );
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception(_parseError(res, 'Gagal memproses foto'));
+    }
+    return jsonDecode(res.body);
+  }
+
+  static Future<void> deleteLog(int logId) async {
+    final headers = await _authHeaders();
+    final res = await http.delete(
+      Uri.parse('$baseUrl/nutrition/log/$logId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) {
+      throw Exception('Gagal menghapus log');
+    }
+  }
+
+  // ── Bookmarks ─────────────────────────────────────────
+
+  static Future<List<Recipe>> getBookmarks() async {
+    final headers = await _authHeaders();
+    final res = await http.get(
+      Uri.parse('$baseUrl/bookmarks'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception('Gagal mengambil bookmark');
+    final List data = jsonDecode(res.body);
+    return data.map((e) => Recipe.fromJson(e)).toList();
+  }
+
+  static Future<void> addBookmark(int recipeId) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      Uri.parse('$baseUrl/bookmarks/$recipeId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception(_parseError(res, 'Gagal bookmark resep'));
+    }
+  }
+
+  static Future<void> removeBookmark(int recipeId) async {
+    final headers = await _authHeaders();
+    final res = await http.delete(
+      Uri.parse('$baseUrl/bookmarks/$recipeId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) throw Exception('Gagal hapus bookmark');
+  }
+
+  static Future<bool> isBookmarked(int recipeId) async {
+    final headers = await _authHeaders();
+    final res = await http.get(
+      Uri.parse('$baseUrl/bookmarks/check/$recipeId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200) return false;
+    return jsonDecode(res.body)['bookmarked'] == true;
+  }
+
   // ── Reviews ───────────────────────────────────────────
+
   static Future<List<Review>> getRecipeReviews(int recipeId) async {
     final headers = await _authHeaders();
     final res = await http.get(
@@ -203,12 +356,13 @@ class ApiService {
       }),
     );
     if (res.statusCode != 200 && res.statusCode != 201) {
-      throw Exception('Gagal mengirim ulasan');
+      throw Exception(_parseError(res, 'Gagal mengirim ulasan'));
     }
     return Review.fromJson(jsonDecode(res.body));
   }
 
   // ── Users ─────────────────────────────────────────────
+
   static Future<User> getUserProfile(int id) async {
     final headers = await _authHeaders();
     final res = await http.get(
@@ -229,7 +383,9 @@ class ApiService {
       headers: headers,
       body: jsonEncode(data),
     );
-    if (res.statusCode != 200) throw Exception('Gagal update profil');
+    if (res.statusCode != 200) {
+      throw Exception(_parseError(res, 'Gagal update profil'));
+    }
     return User.fromJson(jsonDecode(res.body));
   }
 }

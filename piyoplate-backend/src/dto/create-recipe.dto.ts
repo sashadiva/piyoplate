@@ -28,10 +28,12 @@ export class CreateRecipeDto {
   @IsNotEmpty()
   instructions!: string;
 
-  @ApiProperty({ example: 520 })
+  @ApiProperty({
+    example: 520,
+    description: 'Isi 0 jika mau pakai estimasi AI',
+  })
   @Type(() => Number)
   @IsNumber()
-  @IsNotEmpty()
   calories_per_serving!: number;
 
   @ApiProperty({ example: 25, required: false })
@@ -45,4 +47,17 @@ export class CreateRecipeDto {
   @IsString()
   image_url?: string;
 
+  @ApiProperty({
+    example: false,
+    description: 'Jika true, kalori dihitung otomatis oleh AI dari bahan-bahan',
+    required: false,
+  })
+  @IsOptional()
+  use_ai_calories?: boolean;
+
+  @ApiProperty({ example: 2, required: false, description: 'Jumlah porsi resep, default 1' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  servings?: number;
 }

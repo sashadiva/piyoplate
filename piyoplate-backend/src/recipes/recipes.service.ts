@@ -1,10 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
+import { AiService } from '../ai/ai.service';
+import { NutritionService } from '../nutrition/nutrition.service';
+import { EstimateCaloriesDto } from 'src/dto/estimate-calories.dto';
 
 @Injectable()
 export class RecipesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiService: AiService,
+    private readonly nutritionService: NutritionService,
+  ) {}
 
   async getAll(search?: string) {
     return this.prisma.recipes.findMany({
@@ -19,10 +26,8 @@ export class RecipesService {
           }
         : undefined,
       include: {
-        author: {
-          select: { id: true, username: true, profile_picture_url: true },
-        },
-        _count: { select: { reviews: true } },
+        author: { select: { id: true, username: true, profile_picture_url: true } },
+        _count: { select: { reviews: true, bookmarks: true } },
       },
       orderBy: { created_at: 'desc' },
     });
@@ -32,12 +37,12 @@ export class RecipesService {
     const recipe = await this.prisma.recipes.findUnique({
       where: { id },
       include: {
-        author: {
-          select: { id: true, username: true, profile_picture_url: true },
-        },
+        author: { select: { id: true, username: true, profile_picture_url: true } },
         reviews: {
-          select: { rating: true, comment: true, user: { select: { username: true } }, createdAt: true },
           orderBy: { createdAt: 'desc' },
+          include: {
+            user: { select: { id: true, username: true, profile_picture_url: true } },
+          },
         },
         _count: { select: { reviews: true, bookmarks: true } },
       },
@@ -56,7 +61,24 @@ export class RecipesService {
     };
   }
 
+  /**
+   * Buat resep baru.
+   * Jika use_ai_calories = true, kalori dihitung otomatis dari bahan via Claude.
+   */
   async create(authorId: number, data: CreateRecipeDto) {
+    let caloriesPerServing = data.calories_per_serving;
+    let aiCalorieBreakdown: string | null = null;
+
+    if (data.use_ai_calories) {
+      const aiResult = await this.aiService.estimateCaloriesFromIngredients(
+        data.ingredients,
+        data.title,
+        data.servings ?? 1,
+      );
+      caloriesPerServing = aiResult.calories_per_serving;
+      aiCalorieBreakdown = aiResult.breakdown;
+    }
+
     return this.prisma.recipes.create({
       data: {
         author_id: authorId,
@@ -65,9 +87,10 @@ export class RecipesService {
         description: data.description,
         ingredients: data.ingredients,
         instructions: data.instructions,
-        calories_per_serving: data.calories_per_serving,
+        calories_per_serving: caloriesPerServing,
         cook_time_minutes: data.cook_time_minutes,
         image_url: data.image_url,
+        ai_calorie_breakdown: aiCalorieBreakdown,
       },
       include: {
         author: { select: { id: true, username: true } },
@@ -75,25 +98,19 @@ export class RecipesService {
     });
   }
 
+  async previewCalorieEstimate(dto: EstimateCaloriesDto) {
+    const result = await this.aiService.estimateCaloriesFromIngredients(
+      dto.ingredients,
+      dto.title,
+      dto.servings ?? 1,
+    );
+    return {
+      message: 'Estimasi kalori berhasil',
+      ...result,
+    };
+  }
+
   async cookRecipe(userId: number, recipeId: number) {
-    return this.prisma.$transaction(async (tx) => {
-      const recipe = await tx.recipes.findUnique({ where: { id: recipeId } });
-      if (!recipe) throw new NotFoundException('Resep tidak ditemukan');
-
-      const log = await tx.nutrition_logs.create({
-        data: {
-          user_id: userId,
-          recipe_id: recipeId,
-          calories_added: recipe.calories_per_serving,
-          food_name: recipe.title,
-        },
-      });
-
-      return {
-        message: `Berhasil memasak ${recipe.title}!`,
-        added_calories: recipe.calories_per_serving,
-        log,
-      };
-    });
+    return this.nutritionService.logFromCook(userId, recipeId);
   }
 }

@@ -14,25 +14,21 @@ class BookmarkScreen extends StatefulWidget {
 }
 
 class _BookmarkScreenState extends State<BookmarkScreen> {
-  // In a real app this would be persisted; here we mock with a local set
-  // that syncs with HomeScreen via shared state/provider
   List<Recipe> _bookmarked = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadBookmarks();
+    _load();
   }
 
-  Future<void> _loadBookmarks() async {
+  Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      // Fetch all recipes; filter by bookmarked IDs (mocked for demo)
-      final all = await ApiService.getRecipes();
-      // For demo: show first 3 as "bookmarked"
+      final list = await ApiService.getBookmarks();
       setState(() {
-        _bookmarked = all.take(3).toList();
+        _bookmarked = list;
         _loading = false;
       });
     } catch (_) {
@@ -40,64 +36,79 @@ class _BookmarkScreenState extends State<BookmarkScreen> {
     }
   }
 
-  void _remove(int id) {
-    setState(() => _bookmarked.removeWhere((r) => r.id == id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Dihapus dari bookmark'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Future<void> _remove(int recipeId) async {
+    try {
+      await ApiService.removeBookmark(recipeId);
+      setState(() => _bookmarked.removeWhere((r) => r.id == recipeId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Dihapus dari bookmark'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          const SliverAppBar(title: Text('Tersimpan'), floating: true),
-          if (_loading)
-            const SliverFillRemaining(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            )
-          else if (_bookmarked.isEmpty)
-            const SliverFillRemaining(
-              child: EmptyState(
-                icon: Icons.bookmark_border_rounded,
-                title: 'Belum ada resep tersimpan',
-                subtitle: 'Bookmark resep favoritmu dari halaman beranda ❤️',
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.78,
+      body: RefreshIndicator(
+        onRefresh: _load,
+        color: AppColors.primary,
+        child: CustomScrollView(
+          slivers: [
+            const SliverAppBar(title: Text('Tersimpan'), floating: true),
+            if (_loading)
+              const SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) => RecipeCard(
-                    recipe: _bookmarked[i],
-                    isBookmarked: true,
-                    onBookmark: () => _remove(_bookmarked[i].id),
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            RecipeDetailScreen(recipe: _bookmarked[i]),
-                      ),
-                    ),
+              )
+            else if (_bookmarked.isEmpty)
+              const SliverFillRemaining(
+                child: EmptyState(
+                  icon: Icons.bookmark_border_rounded,
+                  title: 'Belum ada resep tersimpan',
+                  subtitle: 'Bookmark resep favoritmu dari halaman beranda ❤️',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.78,
                   ),
-                  childCount: _bookmarked.length,
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => RecipeCard(
+                      recipe: _bookmarked[i],
+                      isBookmarked: true,
+                      onBookmark: () => _remove(_bookmarked[i].id),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RecipeDetailScreen(recipe: _bookmarked[i]),
+                        ),
+                      ).then((_) => _load()),
+                    ),
+                    childCount: _bookmarked.length,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -7,23 +7,23 @@ datasource db {
 }
 
 model users {
-  id                   Int              @id @default(autoincrement())
-  username             String           @unique(map: "username") @db.VarChar(50)
-  email                String           @unique(map: "email") @db.VarChar(100)
-  password             String           @db.VarChar(255)
-  full_name            String?          @db.VarChar(100)
-  profile_picture_url  String?          @db.VarChar(255)
-  daily_calorie_goal   Int              @default(2000)
-  weight               Float?
-  height               Float?
-  role                 users_role       @default(user)
-  created_at           DateTime         @default(now()) @db.Timestamp(0)
-  updated_at           DateTime         @default(now()) @db.Timestamp(0)
+  id                  Int              @id @default(autoincrement())
+  username            String           @unique(map: "username") @db.VarChar(50)
+  email               String           @unique(map: "email") @db.VarChar(100)
+  password            String           @db.VarChar(255)
+  full_name           String?          @db.VarChar(100)
+  profile_picture_url String?          @db.VarChar(255)
+  daily_calorie_goal  Int              @default(2000)
+  weight              Float?
+  height              Float?
+  role                users_role       @default(user)
+  created_at          DateTime         @default(now()) @db.Timestamp(0)
+  updated_at          DateTime         @default(now()) @db.Timestamp(0)
 
-  recipes              recipes[]
-  nutrition_logs       nutrition_logs[]
-  reviews              reviews[]
-  bookmarks            bookmarks[]
+  recipes             recipes[]
+  nutrition_logs      nutrition_logs[]
+  reviews             reviews[]
+  bookmarks           bookmarks[]
 }
 
 enum users_role {
@@ -31,20 +31,29 @@ enum users_role {
   user
 }
 
+/// Source dari mana kalori di-log
+enum log_source {
+  recipe  // dari tombol "Masak sekarang!"
+  manual  // input manual / quick add
+  photo   // deteksi foto via AI
+}
+
 model recipes {
-  id                   Int              @id @default(autoincrement())
+  id                   Int      @id @default(autoincrement())
   author_id            Int
-  title                String           @db.VarChar(100)
-  cuisine_type         String?          @db.VarChar(50)
-  description          String?          @db.Text
+  title                String   @db.VarChar(100)
+  cuisine_type         String?  @db.VarChar(50)
+  description          String?  @db.Text
   calories_per_serving Int
   cook_time_minutes    Int?
-  ingredients          String           @db.Text
-  instructions         String           @db.Text
-  image_url            String?          @db.VarChar(255)
-  video_url            String?          @db.VarChar(255)
-  created_at           DateTime         @default(now()) @db.Timestamp(0)
-  updated_at           DateTime         @default(now()) @db.Timestamp(0)
+  ingredients          String   @db.Text
+  instructions         String   @db.Text
+  image_url            String?  @db.VarChar(255)
+  video_url            String?  @db.VarChar(255)
+  /// Breakdown kalori dari AI (diisi jika use_ai_calories=true)
+  ai_calorie_breakdown String?  @db.Text
+  created_at           DateTime @default(now()) @db.Timestamp(0)
+  updated_at           DateTime @default(now()) @db.Timestamp(0)
 
   author               users            @relation(fields: [author_id], references: [id])
   reviews              reviews[]
@@ -53,12 +62,15 @@ model recipes {
 }
 
 model nutrition_logs {
-  id             Int      @id @default(autoincrement())
+  id             Int        @id @default(autoincrement())
   user_id        Int
   recipe_id      Int?
   food_name      String?
   calories_added Int
-  logged_at      DateTime @default(now()) @db.Timestamp(0)
+  source         log_source @default(manual)
+  ai_confidence  String?    @db.VarChar(10)
+  ai_breakdown   String?    @db.Text
+  logged_at      DateTime   @default(now()) @db.Timestamp(0)
 
   user           users    @relation(fields: [user_id], references: [id])
   recipe         recipes? @relation(fields: [recipe_id], references: [id])

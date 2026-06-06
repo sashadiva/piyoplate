@@ -1,14 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
 import '../../data/services/authProvider.dart';
 import '../../core/theme.dart';
-import '../../ui/widgets/emptyState.dart';
-import '../../ui/widgets/caloriesRing.dart';
-import '../../ui/widgets/logItem.dart';
-import '../../ui/widgets/mainButton.dart';
+import '../widgets/emptyState.dart';
+import '../widgets/mainButton.dart';
+import '../widgets/caloriesRing.dart';
 
 class TrackerScreen extends StatefulWidget {
   const TrackerScreen({super.key});
@@ -19,14 +19,11 @@ class TrackerScreen extends StatefulWidget {
 
 class _TrackerScreenState extends State<TrackerScreen> {
   DailySummary? _summary;
-  List<NutritionLog> _logs = [];
+  List<WeeklyData> _weeklyData = [];
+  Map<String, dynamic> _monthlyData = {};
   bool _loading = true;
-  int _periodIndex = 0; // 0=daily, 1=weekly, 2=monthly
+  int _periodIndex = 0;
   final _periods = ['Hari ini', 'Mingguan', 'Bulanan'];
-
-  // Mock weekly data (replace with API call)
-  final _weekData = [1800, 2100, 1650, 1920, 1340, 0, 0];
-  final _weekLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
   @override
   void initState() {
@@ -41,11 +38,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
     try {
       final results = await Future.wait([
         ApiService.getDailySummary(userId),
-        ApiService.getNutritionHistory(userId),
+        ApiService.getWeeklyData(userId),
+        ApiService.getMonthlySummary(userId),
       ]);
       setState(() {
         _summary = results[0] as DailySummary;
-        _logs = results[1] as List<NutritionLog>;
+        _weeklyData = results[1] as List<WeeklyData>;
+        _monthlyData = results[2] as Map<String, dynamic>;
         _loading = false;
       });
     } catch (_) {
@@ -127,18 +126,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
             else
               SliverToBoxAdapter(
                 child: _periodIndex == 0
-                    ? _DailyView(summary: _summary, logs: _logs)
+                    ? _DailyView(summary: _summary, onRefresh: _load)
                     : _periodIndex == 1
                     ? _WeeklyView(
-                        data: _weekData,
-                        labels: _weekLabels,
-                        logs: _logs,
+                        data: _weeklyData,
                         goal: _summary?.dailyGoal ?? 2000,
                       )
-                    : _MonthlyView(
-                        logs: _logs,
-                        goal: _summary?.dailyGoal ?? 2000,
-                      ),
+                    : _MonthlyView(data: _monthlyData),
               ),
           ],
         ),
@@ -152,11 +146,10 @@ class _TrackerScreenState extends State<TrackerScreen> {
   }
 }
 
-// ── Daily View ────────────────────────────────────────────────────────────────
 class _DailyView extends StatelessWidget {
   final DailySummary? summary;
-  final List<NutritionLog> logs;
-  const _DailyView({required this.summary, required this.logs});
+  final VoidCallback onRefresh;
+  const _DailyView({required this.summary, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -174,43 +167,39 @@ class _DailyView extends StatelessWidget {
               ),
             ),
           ),
+          // By source breakdown
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
               children: [
-                Expanded(
-                  child: _MacroBox(
-                    label: 'Status',
-                    value: s.isOverLimit ? 'Overlimit' : 'On Track',
-                    color: s.isOverLimit ? AppColors.danger : AppColors.primary,
-                  ),
+                _SourceChip(
+                  icon: Icons.outdoor_grill_rounded,
+                  label: 'Masak',
+                  value: '${s.bySource['recipe'] ?? 0} kkal',
+                  color: AppColors.primary,
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _MacroBox(
-                    label: 'Tersisa',
-                    value: '${s.remainingCalories.abs().toInt()} kkal',
-                    color: s.isOverLimit
-                        ? AppColors.danger
-                        : AppColors.textPrimary,
-                  ),
+                _SourceChip(
+                  icon: Icons.edit_outlined,
+                  label: 'Manual',
+                  value: '${s.bySource['manual'] ?? 0} kkal',
+                  color: AppColors.amber,
                 ),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: _MacroBox(
-                    label: 'Target',
-                    value: '${s.dailyGoal} kkal',
-                  ),
+                _SourceChip(
+                  icon: Icons.camera_alt_outlined,
+                  label: 'Foto AI',
+                  value: '${s.bySource['photo'] ?? 0} kkal',
+                  color: const Color(0xFF7C5CBF),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
         ],
         const Padding(
           padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
           child: Text(
-            'Riwayat makanan',
+            'Riwayat makanan hari ini',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -218,7 +207,7 @@ class _DailyView extends StatelessWidget {
             ),
           ),
         ),
-        if (logs.isEmpty)
+        if (s == null || s.logs.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 24),
             child: EmptyState(
@@ -232,9 +221,10 @@ class _DailyView extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: logs.length,
+            itemCount: s.logs.length,
             separatorBuilder: (_, __) => const Divider(),
-            itemBuilder: (_, i) => LogItem(log: logs[i]),
+            itemBuilder: (_, i) =>
+                _LogTile(log: s.logs[i], onDeleted: onRefresh),
           ),
         const SizedBox(height: 100),
       ],
@@ -242,61 +232,213 @@ class _DailyView extends StatelessWidget {
   }
 }
 
-class _MacroBox extends StatelessWidget {
+class _SourceChip extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
-  final Color? color;
-  const _MacroBox({required this.label, required this.value, this.color});
+  final Color color;
+  const _SourceChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: color ?? AppColors.textPrimary,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.textTertiary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Weekly View ───────────────────────────────────────────────────────────────
-class _WeeklyView extends StatelessWidget {
-  final List<int> data;
-  final List<String> labels;
-  final List<NutritionLog> logs;
-  final int goal;
-  const _WeeklyView({
-    required this.data,
-    required this.labels,
-    required this.logs,
-    required this.goal,
-  });
+class _LogTile extends StatelessWidget {
+  final NutritionLog log;
+  final VoidCallback onDeleted;
+  const _LogTile({required this.log, required this.onDeleted});
+
+  IconData get _icon {
+    switch (log.source) {
+      case 'recipe':
+        return Icons.outdoor_grill_rounded;
+      case 'photo':
+        return Icons.camera_alt_outlined;
+      default:
+        return Icons.edit_outlined;
+    }
+  }
+
+  Color get _iconColor {
+    switch (log.source) {
+      case 'recipe':
+        return AppColors.primary;
+      case 'photo':
+        return const Color(0xFF7C5CBF);
+      default:
+        return AppColors.amber;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final maxVal = data.fold(0, (a, b) => a > b ? a : b).toDouble();
-    final todayIdx = DateTime.now().weekday - 1;
+    return Dismissible(
+      key: Key('log_${log.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        color: AppColors.dangerLight,
+        child: const Icon(Icons.delete_outline, color: AppColors.danger),
+      ),
+      onDismissed: (_) async {
+        try {
+          await ApiService.deleteLog(log.id);
+          onDeleted();
+        } catch (_) {}
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: _iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(_icon, color: _iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    log.displayName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        _formatTime(log.loggedAt),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _iconColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          log.sourceLabel,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: _iconColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      // Badge confidence AI untuk log dari foto
+                      if (log.source == 'photo' &&
+                          log.aiConfidence != null) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7C5CBF).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '${log.aiConfidence} confidence',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF7C5CBF),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '+${log.caloriesAdded} kkal',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+}
+
+class _WeeklyView extends StatelessWidget {
+  final List<WeeklyData> data;
+  final int goal;
+  const _WeeklyView({required this.data, required this.goal});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxVal = data.fold(
+      0,
+      (a, b) => a > b.totalCalories ? a : b.totalCalories,
+    );
+    final effectiveMax = maxVal < goal ? goal : maxVal;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,26 +447,28 @@ class _WeeklyView extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(7, (i) {
-              final h = maxVal > 0 ? (data[i] / maxVal) * 80 : 0.0;
+            children: data.map((d) {
+              final barH = effectiveMax > 0
+                  ? (d.totalCalories / effectiveMax * 80).toDouble()
+                  : 0.0;
               return Expanded(
                 child: Column(
                   children: [
-                    if (data[i] > 0)
+                    if (d.totalCalories > 0)
                       Text(
-                        '${data[i]}',
+                        '${d.totalCalories}',
                         style: const TextStyle(
-                          fontSize: 9,
+                          fontSize: 8,
                           color: AppColors.textTertiary,
                         ),
                       ),
                     const SizedBox(height: 4),
                     AnimatedContainer(
-                      duration: const Duration(milliseconds: 400),
-                      height: h.toDouble(),
+                      duration: const Duration(milliseconds: 500),
+                      height: barH,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
-                        color: i == todayIdx
+                        color: d.isToday
                             ? AppColors.primary
                             : AppColors.primaryLight,
                         borderRadius: const BorderRadius.vertical(
@@ -334,13 +478,13 @@ class _WeeklyView extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      labels[i],
+                      d.dayLabel,
                       style: TextStyle(
                         fontSize: 11,
-                        color: i == todayIdx
+                        color: d.isToday
                             ? AppColors.primary
                             : AppColors.textTertiary,
-                        fontWeight: i == todayIdx
+                        fontWeight: d.isToday
                             ? FontWeight.w600
                             : FontWeight.normal,
                       ),
@@ -348,12 +492,11 @@ class _WeeklyView extends StatelessWidget {
                   ],
                 ),
               );
-            }),
+            }).toList(),
           ),
         ),
-        // Goal line indicator
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
           child: Row(
             children: [
               Container(width: 12, height: 3, color: AppColors.amber),
@@ -368,62 +511,81 @@ class _WeeklyView extends StatelessWidget {
             ],
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
-          child: Text(
-            'Riwayat makanan minggu ini',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
+        // Ringkasan mingguan
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  label: 'Total minggu ini',
+                  value: '${data.fold(0, (a, b) => a + b.totalCalories)} kkal',
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StatCard(
+                  label: 'Rata-rata/hari',
+                  value:
+                      '${(data.where((d) => d.totalCalories > 0).isEmpty ? 0 : data.fold(0, (a, b) => a + b.totalCalories) ~/ data.where((d) => d.totalCalories > 0).length)} kkal',
+                ),
+              ),
+            ],
           ),
         ),
-        if (logs.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 24),
-            child: EmptyState(
-              icon: Icons.history,
-              title: 'Belum ada riwayat',
-              subtitle: 'Mulai log makananmu!',
-            ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: logs.take(10).length,
-            separatorBuilder: (_, __) => const Divider(),
-            itemBuilder: (_, i) => LogItem(log: logs[i]),
-          ),
         const SizedBox(height: 100),
       ],
     );
   }
 }
 
-// ── Monthly View ──────────────────────────────────────────────────────────────
-class _MonthlyView extends StatelessWidget {
-  final List<NutritionLog> logs;
-  final int goal;
-  const _MonthlyView({required this.logs, required this.goal});
-
-  Map<String, int> get _totals {
-    final Map<String, int> m = {};
-    for (final l in logs) {
-      final key = l.displayName;
-      m[key] = (m[key] ?? 0) + l.caloriesAdded;
-    }
-    return Map.fromEntries(
-      m.entries.toList()..sort((a, b) => b.value.compareTo(a.value)),
-    );
-  }
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  const _StatCard({required this.label, required this.value, this.color});
 
   @override
   Widget build(BuildContext context) {
-    final t = _totals;
-    final total = logs.fold(0, (a, b) => a + b.caloriesAdded);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: color ?? AppColors.textPrimary,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthlyView extends StatelessWidget {
+  final Map<String, dynamic> data;
+  const _MonthlyView({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final topFoods = (data['top_foods'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -432,22 +594,25 @@ class _MonthlyView extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: _MacroBox(
-                  label: 'Total bulan ini',
-                  value: '$total kkal',
+                child: _StatCard(
+                  label: 'Total kalori',
+                  value: '${data['total_calories'] ?? 0} kkal',
                   color: AppColors.primary,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _MacroBox(
+                child: _StatCard(
                   label: 'Rata-rata/hari',
-                  value: '${logs.isEmpty ? 0 : total ~/ 30} kkal',
+                  value: '${data['average_per_day'] ?? 0} kkal',
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _MacroBox(label: 'Total log', value: '${logs.length}x'),
+                child: _StatCard(
+                  label: 'Hari tercatat',
+                  value: '${data['days_tracked'] ?? 0} hari',
+                ),
               ),
             ],
           ),
@@ -455,7 +620,7 @@ class _MonthlyView extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
           child: Text(
-            'Makanan terbanyak',
+            'Makanan terbanyak bulan ini',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -463,74 +628,68 @@ class _MonthlyView extends StatelessWidget {
             ),
           ),
         ),
-        if (t.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 24),
-            child: EmptyState(
-              icon: Icons.pie_chart_outline,
-              title: 'Belum ada data',
-              subtitle: 'Mulai catat makananmu',
-            ),
+        if (topFoods.isEmpty)
+          const EmptyState(
+            icon: Icons.bar_chart_outlined,
+            title: 'Belum ada data',
+            subtitle: 'Mulai catat makananmu!',
           )
         else
-          ...t.entries
-              .take(8)
-              .map(
-                (e) => Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: Column(
+          ...topFoods.map(
+            (f) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryLight,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                Icons.restaurant,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                e.key,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '${e.value} kkal',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.restaurant,
+                          color: AppColors.primary,
+                          size: 20,
                         ),
                       ),
-                      const Divider(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          f['food_name'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${f['total_calories']} kkal',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
+                const Divider(indent: 16, endIndent: 16),
+              ],
+            ),
+          ),
         const SizedBox(height: 100),
       ],
     );
   }
 }
 
-// ── Add Log Bottom Sheet ──────────────────────────────────────────────────────
 class _AddLogSheet extends StatefulWidget {
   final VoidCallback onAdded;
   const _AddLogSheet({required this.onAdded});
@@ -540,67 +699,110 @@ class _AddLogSheet extends StatefulWidget {
 }
 
 class _AddLogSheetState extends State<_AddLogSheet> {
-  int _mode = -1; // -1=pick, 0=photo, 1=manual, 2=quick
+  // mode: -1=pilih, 0=foto, 1=manual
+  int _mode = -1;
   final _nameCtrl = TextEditingController();
   final _kcalCtrl = TextEditingController();
+  final _portionCtrl = TextEditingController();
   bool _submitting = false;
+  File? _pickedImage;
+
+  // Hasil sementara dari AI setelah deteksi foto
+  Map<String, dynamic>? _aiPreview;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _kcalCtrl.dispose();
+    _portionCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
+  // ── FOTO ────────────────────────────────────────────────────────────────────
+  Future<void> _pickPhoto(ImageSource source) async {
     final picker = ImagePicker();
-    final img = await picker.pickImage(source: ImageSource.camera);
-    if (img != null && mounted) {
-      // Simulate AI calorie detection
-      setState(() {
-        _mode = 1;
-        _nameCtrl.text = 'Makanan dari foto';
-        _kcalCtrl.text = '350'; // mock AI result
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI mendeteksi ±350 kkal · Bisa disesuaikan 🤖'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.primary,
-        ),
-      );
-    }
-  }
+    final img = await picker.pickImage(
+      source: source,
+      imageQuality: 70, // compress supaya base64 tidak terlalu besar
+      maxWidth: 1024,
+    );
+    if (img == null) return;
 
-  Future<void> _submit() async {
-    final name = _nameCtrl.text.trim();
-    final kcal = int.tryParse(_kcalCtrl.text.trim());
-    if (name.isEmpty || kcal == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi nama dan kalori dulu ya!')),
-      );
-      return;
-    }
-    setState(() => _submitting = true);
+    final file = File(img.path);
+    setState(() {
+      _pickedImage = file;
+      _aiPreview = null;
+      _submitting = true;
+    });
+
     try {
-      await ApiService.addNutritionLog(foodName: name, caloriesAdded: kcal);
-      if (mounted) {
-        Navigator.pop(context);
-        widget.onAdded();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$name ($kcal kkal) ditambahkan! ✅'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: AppColors.primary,
-          ),
+      // Kirim ke backend → Gemini Vision analisis
+      final result = await ApiService.logFromPhoto(
+        imageFile: file,
+        portionNote: _portionCtrl.text.trim().isEmpty
+            ? null
+            : _portionCtrl.text.trim(),
+      );
+
+      final aiResult = result['ai_result'] as Map<String, dynamic>;
+      setState(() {
+        _aiPreview = aiResult;
+        _nameCtrl.text = aiResult['food_name'] ?? '';
+        _kcalCtrl.text = '${aiResult['calories_estimated'] ?? 0}';
+        _submitting = false;
+      });
+
+      if (aiResult['calories_estimated'] == 0) {
+        _showSnack(
+          'Makanan tidak terdeteksi. Coba foto lebih jelas.',
+          isError: true,
+        );
+      } else {
+        _showSnack(
+          'AI mendeteksi ${aiResult['food_name']} · bisa disesuaikan sebelum simpan',
         );
       }
     } catch (e) {
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      _showSnack(
+        'Gagal analisis foto: ${e.toString().replaceFirst('Exception: ', '')}',
+        isError: true,
       );
     }
+  }
+
+  // ── SUBMIT MANUAL / SETELAH FOTO ────────────────────────────────────────────
+  Future<void> _submitManual() async {
+    final name = _nameCtrl.text.trim();
+    final kcal = int.tryParse(_kcalCtrl.text.trim());
+    if (name.isEmpty || kcal == null || kcal <= 0) {
+      _showSnack('Isi nama dan kalori dulu ya!', isError: true);
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await ApiService.logManual(foodName: name, caloriesAdded: kcal);
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onAdded();
+        _showSnack('$name ($kcal kkal) ditambahkan! ✅');
+      }
+    } catch (e) {
+      setState(() => _submitting = false);
+      _showSnack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? AppColors.danger : AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -636,6 +838,8 @@ class _AddLogSheetState extends State<_AddLogSheet> {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── PILIH MODE ────────────────────────────────────────────────────
           if (_mode == -1) ...[
             GridView.count(
               crossAxisCount: 2,
@@ -647,59 +851,218 @@ class _AddLogSheetState extends State<_AddLogSheet> {
                 _ModeOption(
                   icon: Icons.camera_alt_outlined,
                   label: 'Foto makanan',
-                  onTap: _pickPhoto,
+                  subtitle: 'AI deteksi otomatis',
+                  color: const Color(0xFF7C5CBF),
+                  onTap: () => setState(() => _mode = 0),
                 ),
                 _ModeOption(
                   icon: Icons.edit_outlined,
                   label: 'Input manual',
+                  subtitle: 'Isi nama & kalori',
+                  color: AppColors.amber,
                   onTap: () => setState(() => _mode = 1),
-                ),
-                _ModeOption(
-                  icon: Icons.menu_book_outlined,
-                  label: 'Dari resep',
-                  onTap: () => setState(() => _mode = 1),
-                ),
-                _ModeOption(
-                  icon: Icons.bolt_outlined,
-                  label: 'Quick add',
-                  onTap: () => setState(() => _mode = 2),
                 ),
               ],
             ),
-          ] else ...[
-            if (_mode == 2) ...[
-              const Text(
-                'Quick add — isi nama dan estimasi kalori',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ]
+          // ── MODE FOTO ─────────────────────────────────────────────────────
+          else if (_mode == 0) ...[
+            // Preview foto jika sudah dipilih
+            if (_pickedImage != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _pickedImage!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(height: 12),
             ],
+
+            // Input keterangan porsi (opsional, bantu AI lebih akurat)
+            if (_pickedImage == null) ...[
+              TextField(
+                controller: _portionCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Keterangan porsi (opsional)',
+                  hintText: 'Cth: 1 piring besar, setengah porsi...',
+                  prefixIcon: Icon(Icons.info_outline, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Tombol pilih sumber foto
+              Row(
+                children: [
+                  Expanded(
+                    child: _PhotoSourceBtn(
+                      icon: Icons.camera_alt_outlined,
+                      label: 'Kamera',
+                      onTap: () => _pickPhoto(ImageSource.camera),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _PhotoSourceBtn(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Galeri',
+                      onTap: () => _pickPhoto(ImageSource.gallery),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // Loading saat AI sedang analisis
+            if (_submitting) ...[
+              const SizedBox(height: 16),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF7C5CBF),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Text(
+                    'AI sedang menganalisis foto...',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // Hasil AI — bisa diedit sebelum simpan
+            if (_aiPreview != null && !_submitting) ...[
+              const SizedBox(height: 12),
+              // Badge confidence
+              Row(
+                children: [
+                  const Icon(
+                    Icons.auto_awesome,
+                    size: 14,
+                    color: Color(0xFF7C5CBF),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Hasil AI · confidence: ${_aiPreview!['confidence']}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF7C5CBF),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Breakdown kalori dari AI
+              if ((_aiPreview!['breakdown'] as String? ?? '').isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C5CBF).withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _aiPreview!['breakdown'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 10),
+              // Field nama & kalori — bisa dikoreksi user
+              TextField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(labelText: 'Nama makanan'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _kcalCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Kalori (kkal) — bisa disesuaikan',
+                  suffixText: 'kkal',
+                ),
+              ),
+              const SizedBox(height: 14),
+              MainButton(
+                text: 'Simpan ke tracker',
+                onPressed: _submitManual,
+                icon: Icons.add_circle_outline,
+              ),
+            ],
+
+            // Ganti foto
+            if (_pickedImage != null && !_submitting && _aiPreview == null) ...[
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => setState(() {
+                    _pickedImage = null;
+                    _aiPreview = null;
+                  }),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Ganti foto'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ]
+          // ── MODE MANUAL ───────────────────────────────────────────────────
+          else ...[
             TextField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(labelText: 'Nama makanan'),
+              decoration: const InputDecoration(
+                labelText: 'Nama makanan',
+                hintText: 'Cth: Mie Ayam Bakso',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _kcalCtrl,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: 'Kalori (kkal)',
+                labelText: 'Jumlah kalori',
+                hintText: 'Cth: 450',
                 suffixText: 'kkal',
               ),
             ),
             const SizedBox(height: 16),
             MainButton(
               text: 'Tambah ke tracker',
-              onPressed: _submit,
+              onPressed: _submitManual,
               isLoading: _submitting,
               icon: Icons.add_circle_outline,
             ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => setState(() => _mode = -1),
-              child: const Text(
-                'Kembali',
-                style: TextStyle(color: AppColors.textSecondary),
+          ],
+
+          // Tombol kembali
+          if (_mode != -1) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: TextButton(
+                onPressed: () => setState(() {
+                  _mode = -1;
+                  _pickedImage = null;
+                  _aiPreview = null;
+                  _nameCtrl.clear();
+                  _kcalCtrl.clear();
+                }),
+                child: const Text(
+                  'Kembali',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               ),
             ),
           ],
@@ -712,8 +1075,67 @@ class _AddLogSheetState extends State<_AddLogSheet> {
 class _ModeOption extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String subtitle;
+  final Color color;
   final VoidCallback onTap;
   const _ModeOption({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoSourceBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PhotoSourceBtn({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -724,22 +1146,22 @@ class _ModeOption extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: const Color(0xFF7C5CBF).withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border, width: 0.5),
+          border: Border.all(color: const Color(0xFF7C5CBF).withOpacity(0.25)),
         ),
-        child: Row(
+        child: Column(
           children: [
-            Icon(icon, color: AppColors.primary, size: 22),
-            const SizedBox(width: 8),
+            Icon(icon, color: const Color(0xFF7C5CBF), size: 26),
+            const SizedBox(height: 4),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 13,
+                color: Color(0xFF7C5CBF),
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
               ),
             ),
           ],

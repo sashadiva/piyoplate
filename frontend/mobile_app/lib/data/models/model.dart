@@ -11,6 +11,7 @@ class Recipe {
   final double avgRating;
   final int reviewCount;
   final int cookingDurationMinutes;
+  final String? aiCalorieBreakdown;
 
   const Recipe({
     required this.id,
@@ -25,6 +26,7 @@ class Recipe {
     this.avgRating = 0,
     this.reviewCount = 0,
     this.cookingDurationMinutes = 0,
+    this.aiCalorieBreakdown,
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) => Recipe(
@@ -39,7 +41,8 @@ class Recipe {
     authorName: json['author']?['username'] ?? 'Unknown',
     avgRating: (json['avgRating'] ?? 0).toDouble(),
     reviewCount: json['_count']?['reviews'] ?? 0,
-    cookingDurationMinutes: json['cooking_duration_minutes'] ?? 0,
+    cookingDurationMinutes: json['cook_time_minutes'] ?? 0,
+    aiCalorieBreakdown: json['ai_calorie_breakdown'],
   );
 
   List<String> get ingredientList =>
@@ -57,6 +60,9 @@ class NutritionLog {
   final int caloriesAdded;
   final DateTime loggedAt;
   final String? recipeTitle;
+  final String source; // 'recipe' | 'manual' | 'photo'
+  final String? aiConfidence;
+  final String? aiBreakdown;
 
   const NutritionLog({
     required this.id,
@@ -66,6 +72,9 @@ class NutritionLog {
     required this.caloriesAdded,
     required this.loggedAt,
     this.recipeTitle,
+    this.source = 'manual',
+    this.aiConfidence,
+    this.aiBreakdown,
   });
 
   factory NutritionLog.fromJson(Map<String, dynamic> json) => NutritionLog(
@@ -76,9 +85,24 @@ class NutritionLog {
     caloriesAdded: json['calories_added'],
     loggedAt: DateTime.parse(json['logged_at']),
     recipeTitle: json['recipe']?['title'],
+    source: json['source'] ?? 'manual',
+    aiConfidence: json['ai_confidence'],
+    aiBreakdown: json['ai_breakdown'],
   );
 
   String get displayName => recipeTitle ?? foodName ?? 'Unknown food';
+
+  // Icon berdasarkan sumber log
+  String get sourceLabel {
+    switch (source) {
+      case 'recipe':
+        return 'dari resep';
+      case 'photo':
+        return 'dari foto AI';
+      default:
+        return 'manual';
+    }
+  }
 }
 
 class Review {
@@ -149,27 +173,96 @@ class DailySummary {
   final num totalConsumed;
   final num remainingCalories;
   final String status;
+  final int progressPercent;
+  final Map<String, int> bySource;
+  final List<NutritionLog> logs;
 
   const DailySummary({
     required this.dailyGoal,
     required this.totalConsumed,
     required this.remainingCalories,
     required this.status,
+    this.progressPercent = 0,
+    this.bySource = const {},
+    this.logs = const [],
   });
 
-  factory DailySummary.fromJson(Map<String, dynamic> json) => DailySummary(
-    dailyGoal: json['daily_goal'],
-    totalConsumed: json['total_consumed'],
-    remainingCalories: json['remaining_calories'],
-    status: json['status'],
-  );
+  factory DailySummary.fromJson(Map<String, dynamic> json) {
+    final src = json['by_source'] as Map<String, dynamic>? ?? {};
+    final logsList = (json['logs'] as List? ?? [])
+        .map((e) => NutritionLog.fromJson(e))
+        .toList();
+    return DailySummary(
+      dailyGoal: json['daily_goal'],
+      totalConsumed: json['total_consumed'],
+      remainingCalories: json['remaining_calories'],
+      status: json['status'],
+      progressPercent: json['progress_percent'] ?? 0,
+      bySource: {
+        'recipe': src['from_recipe'] ?? 0,
+        'manual': src['from_manual'] ?? 0,
+        'photo': src['from_photo'] ?? 0,
+      },
+      logs: logsList,
+    );
+  }
 
-  double get progressPercent =>
+  double get progressFraction =>
       (totalConsumed / dailyGoal).clamp(0.0, 1.0).toDouble();
   bool get isOverLimit => status == 'Overlimit';
 }
 
-// Ingredient model for Add Recipe form
+class WeeklyData {
+  final String date;
+  final int totalCalories;
+  final int logsCount;
+
+  const WeeklyData({
+    required this.date,
+    required this.totalCalories,
+    required this.logsCount,
+  });
+
+  factory WeeklyData.fromJson(Map<String, dynamic> json) => WeeklyData(
+    date: json['date'],
+    totalCalories: json['total_calories'] ?? 0,
+    logsCount: json['logs_count'] ?? 0,
+  );
+
+  // Label hari singkat: 'Sen', 'Sel', dst
+  String get dayLabel {
+    final d = DateTime.parse(date);
+    const labels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    return labels[d.weekday - 1];
+  }
+
+  bool get isToday {
+    final d = DateTime.parse(date);
+    final now = DateTime.now();
+    return d.day == now.day && d.month == now.month && d.year == now.year;
+  }
+}
+
+// Model untuk AI calorie estimate result
+class AiCalorieResult {
+  final int caloriesPerServing;
+  final String breakdown;
+  final String notes;
+
+  const AiCalorieResult({
+    required this.caloriesPerServing,
+    required this.breakdown,
+    required this.notes,
+  });
+
+  factory AiCalorieResult.fromJson(Map<String, dynamic> json) =>
+      AiCalorieResult(
+        caloriesPerServing: json['calories_per_serving'] ?? 0,
+        breakdown: json['breakdown'] ?? '',
+        notes: json['notes'] ?? '',
+      );
+}
+
 class IngredientInput {
   String name;
   String qty;
