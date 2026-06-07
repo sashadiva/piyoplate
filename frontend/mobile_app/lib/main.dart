@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile_app/core/theme.dart';
-import 'package:mobile_app/ui/screens/login.dart';
-import 'package:mobile_app/ui/screens/register.dart';
-import 'package:mobile_app/data/services/authProvider.dart';
-import 'package:mobile_app/ui/screens/mainShell.dart';
+import '../../data/services/authProvider.dart';
+import '../../core/theme.dart';
+import '../../ui/screens/Login.dart';
+import '../../ui/screens/Register.dart';
+import '../../ui/screens/mainShell.dart';
 
 void main() {
   runApp(

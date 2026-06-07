@@ -12,6 +12,12 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class NutritionController {
   constructor(private readonly nutritionService: NutritionService) {}
 
+  // ── LOG ENDPOINTS ─────────────────────────────────────────────────────────
+
+  /**
+   * LOG MANUAL — user input nama + kalori sendiri
+   * Source: 'manual'
+   */
   @Post('log/manual')
   @ApiOperation({
     summary: 'Log kalori manual — input nama makanan & jumlah kalori',
@@ -31,11 +37,15 @@ export class NutritionController {
     return this.nutritionService.logFromPhoto(req.user.userId, dto);
   }
 
+  // ── HISTORY ───────────────────────────────────────────────────────────────
+
   @Get('history/:userId')
   @ApiOperation({ summary: 'Riwayat semua log kalori user (50 terbaru)' })
   getHistory(@Param('userId', ParseIntPipe) userId: number) {
     return this.nutritionService.getHistory(userId);
   }
+
+  // ── SUMMARY ───────────────────────────────────────────────────────────────
 
   @Get('summary/:userId')
   @ApiOperation({
@@ -57,7 +67,9 @@ export class NutritionController {
   getMonthlySummary(@Param('userId', ParseIntPipe) userId: number) {
     return this.nutritionService.getMonthlySummary(userId);
   }
-  
+
+  // ── DELETE ────────────────────────────────────────────────────────────────
+
   @Delete('log/:id')
   @ApiOperation({ summary: 'Hapus satu log kalori' })
   deleteLog(@Request() req, @Param('id', ParseIntPipe) logId: number) {

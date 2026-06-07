@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,9 +6,9 @@ import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
 import '../../data/services/authProvider.dart';
 import '../../core/theme.dart';
+import '../widgets/caloriesRing.dart';
 import '../widgets/emptyState.dart';
 import '../widgets/mainButton.dart';
-import '../widgets/caloriesRing.dart';
 
 class TrackerScreen extends StatefulWidget {
   const TrackerScreen({super.key});
@@ -146,6 +146,7 @@ class _TrackerScreenState extends State<TrackerScreen> {
   }
 }
 
+// ── Daily View ────────────────────────────────────────────────────────────────
 class _DailyView extends StatelessWidget {
   final DailySummary? summary;
   final VoidCallback onRefresh;
@@ -427,6 +428,7 @@ class _LogTile extends StatelessWidget {
   }
 }
 
+// ── Weekly View ───────────────────────────────────────────────────────────────
 class _WeeklyView extends StatelessWidget {
   final List<WeeklyData> data;
   final int goal;
@@ -690,6 +692,7 @@ class _MonthlyView extends StatelessWidget {
   }
 }
 
+// ── Add Log Bottom Sheet ──────────────────────────────────────────────────────
 class _AddLogSheet extends StatefulWidget {
   final VoidCallback onAdded;
   const _AddLogSheet({required this.onAdded});
@@ -705,7 +708,8 @@ class _AddLogSheetState extends State<_AddLogSheet> {
   final _kcalCtrl = TextEditingController();
   final _portionCtrl = TextEditingController();
   bool _submitting = false;
-  File? _pickedImage;
+  Uint8List? _pickedImageBytes;
+  String? _pickedImageExt;
 
   // Hasil sementara dari AI setelah deteksi foto
   Map<String, dynamic>? _aiPreview;
@@ -723,14 +727,18 @@ class _AddLogSheetState extends State<_AddLogSheet> {
     final picker = ImagePicker();
     final img = await picker.pickImage(
       source: source,
-      imageQuality: 70, // compress supaya base64 tidak terlalu besar
+      imageQuality: 70,
       maxWidth: 1024,
     );
     if (img == null) return;
 
-    final file = File(img.path);
+    // ✅ readAsBytes() bekerja di Web & Mobile — tidak pakai File
+    final bytes = await img.readAsBytes();
+    final ext = img.name.split('.').last.toLowerCase();
+
     setState(() {
-      _pickedImage = file;
+      _pickedImageBytes = bytes;
+      _pickedImageExt = ext;
       _aiPreview = null;
       _submitting = true;
     });
@@ -738,7 +746,8 @@ class _AddLogSheetState extends State<_AddLogSheet> {
     try {
       // Kirim ke backend → Gemini Vision analisis
       final result = await ApiService.logFromPhoto(
-        imageFile: file,
+        imageBytes: bytes,
+        imageExt: ext,
         portionNote: _portionCtrl.text.trim().isEmpty
             ? null
             : _portionCtrl.text.trim(),
@@ -839,7 +848,6 @@ class _AddLogSheetState extends State<_AddLogSheet> {
           ),
           const SizedBox(height: 16),
 
-          // ── PILIH MODE ────────────────────────────────────────────────────
           if (_mode == -1) ...[
             GridView.count(
               crossAxisCount: 2,
@@ -868,11 +876,11 @@ class _AddLogSheetState extends State<_AddLogSheet> {
           // ── MODE FOTO ─────────────────────────────────────────────────────
           else if (_mode == 0) ...[
             // Preview foto jika sudah dipilih
-            if (_pickedImage != null) ...[
+            if (_pickedImageBytes != null) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  _pickedImage!,
+                child: Image.memory(
+                  _pickedImageBytes!,
                   height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -882,7 +890,7 @@ class _AddLogSheetState extends State<_AddLogSheet> {
             ],
 
             // Input keterangan porsi (opsional, bantu AI lebih akurat)
-            if (_pickedImage == null) ...[
+            if (_pickedImageBytes == null) ...[
               TextField(
                 controller: _portionCtrl,
                 decoration: const InputDecoration(
@@ -1002,12 +1010,14 @@ class _AddLogSheetState extends State<_AddLogSheet> {
             ],
 
             // Ganti foto
-            if (_pickedImage != null && !_submitting && _aiPreview == null) ...[
+            if (_pickedImageBytes != null &&
+                !_submitting &&
+                _aiPreview == null) ...[
               const SizedBox(height: 12),
               Center(
                 child: TextButton.icon(
                   onPressed: () => setState(() {
-                    _pickedImage = null;
+                    _pickedImageBytes = null;
                     _aiPreview = null;
                   }),
                   icon: const Icon(Icons.refresh, size: 16),
@@ -1054,7 +1064,7 @@ class _AddLogSheetState extends State<_AddLogSheet> {
               child: TextButton(
                 onPressed: () => setState(() {
                   _mode = -1;
-                  _pickedImage = null;
+                  _pickedImageBytes = null;
                   _aiPreview = null;
                   _nameCtrl.clear();
                   _kcalCtrl.clear();

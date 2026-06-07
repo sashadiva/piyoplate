@@ -1,10 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
 import '../../core/theme.dart';
-import '../../ui/widgets/mainButton.dart';
-import '../../ui/widgets/statusBox.dart';
-import '../../ui/widgets/emptyState.dart';
+import '../widgets/mainButton.dart';
+import '../widgets/statusBox.dart';
+import '../widgets/emptyState.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final Recipe recipe;
@@ -22,6 +23,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   bool _isCooking = false;
   List<Review> _reviews = [];
   bool _reviewsLoaded = false;
+  int _activeTab = 0;
 
   static const _portions = [1, 2, 4, 6];
 
@@ -30,9 +32,34 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
     _tabCtrl.addListener(() {
-      if (_tabCtrl.index == 2 && !_reviewsLoaded) _loadReviews();
+      if (!_tabCtrl.indexIsChanging) {
+        setState(() => _activeTab = _tabCtrl.index);
+        if (_tabCtrl.index == 2 && !_reviewsLoaded) _loadReviews();
+      }
     });
     _checkBookmark();
+  }
+
+  Widget _buildHeroImage(String url) {
+    if (url.startsWith('data:')) {
+      try {
+        final comma = url.indexOf(',');
+        if (comma != -1) {
+          final bytes = base64Decode(url.substring(comma + 1));
+          return Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _PlaceholderImage(),
+          );
+        }
+      } catch (_) {}
+      return _PlaceholderImage();
+    }
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _PlaceholderImage(),
+    );
   }
 
   Future<void> _checkBookmark() async {
@@ -51,11 +78,45 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   Future<void> _loadReviews() async {
     try {
       final reviews = await ApiService.getRecipeReviews(widget.recipe.id);
-      setState(() {
-        _reviews = reviews;
-        _reviewsLoaded = true;
-      });
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _reviews = reviews;
+          _reviewsLoaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _reviewsLoaded = true);
+    }
+  }
+
+  Future<void> _toggleBookmark() async {
+    try {
+      if (_isBookmarked) {
+        await ApiService.removeBookmark(widget.recipe.id);
+      } else {
+        await ApiService.addBookmark(widget.recipe.id);
+      }
+      setState(() => _isBookmarked = !_isBookmarked);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isBookmarked ? 'Resep disimpan ❤️' : 'Bookmark dihapus',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _cookRecipe() async {
@@ -83,7 +144,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         );
       }
     } finally {
-      setState(() => _isCooking = false);
+      if (mounted) setState(() => _isCooking = false);
     }
   }
 
@@ -146,13 +207,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 controller: commentCtrl,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText: 'Ceritakan pengalamanmu memasak resep ini...',
+                  hintText: 'Ceritakan pengalamanmu...',
                   labelText: 'Komentar (opsional)',
                 ),
               ),
               const SizedBox(height: 16),
               MainButton(
                 text: 'Kirim ulasan',
+                icon: Icons.send_rounded,
                 onPressed: () async {
                   try {
                     await ApiService.createReview(
@@ -172,12 +234,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         ),
                       );
                     }
-                  } catch (e) {
+                  } catch (_) {
                     if (mounted) Navigator.pop(context);
                   }
                 },
-                icon: Icons.send_rounded,
               ),
+              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -189,69 +251,71 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   Widget build(BuildContext context) {
     final recipe = widget.recipe;
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 240,
-            pinned: true,
-            leading: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: BoxShape.circle,
+      body: SingleChildScrollView(
+        // ✅ Ganti CustomScrollView+SliverFillRemaining → SingleChildScrollView
+        // SliverFillRemaining crash di Flutter Web karena infinite height conflict
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Hero image + AppBar ───────────────────────────────────────
+            Stack(
+              children: [
+                // Gambar resep
+                SizedBox(
+                  height: 260,
+                  width: double.infinity,
+                  child: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
+                      ? _buildHeroImage(recipe.imageUrl!)
+                      : _PlaceholderImage(),
                 ),
-                child: const Icon(
-                  Icons.arrow_back,
-                  size: 18,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                onPressed: () => setState(() => _isBookmarked = !_isBookmarked),
-                icon: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    size: 18,
-                    color: _isBookmarked
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: recipe.imageUrl != null
-                  ? Image.network(recipe.imageUrl!, fit: BoxFit.cover)
-                  : Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF9FE1CB), Color(0xFF1D9E75)],
-                        ),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.restaurant,
-                          size: 72,
-                          color: Colors.white70,
-                        ),
+                // Gradient overlay supaya tombol back terbaca
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 100,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.35),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
+                  ),
+                ),
+                // Back button
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  left: 12,
+                  child: _CircleBtn(
+                    icon: Icons.arrow_back,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                ),
+                // Bookmark button
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 8,
+                  right: 12,
+                  child: _CircleBtn(
+                    icon: _isBookmarked
+                        ? Icons.bookmark
+                        : Icons.bookmark_border,
+                    iconColor: _isBookmarked
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                    onTap: _toggleBookmark,
+                  ),
+                ),
+              ],
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+
+            // ── Info utama ────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -295,8 +359,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Stats row
+                  const SizedBox(height: 14),
+
+                  // Stats
                   Row(
                     children: [
                       Expanded(
@@ -309,7 +374,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: StatBox(
-                          value: '${recipe.cookingDurationMinutes}',
+                          value: recipe.cookingDurationMinutes > 0
+                              ? '${recipe.cookingDurationMinutes}'
+                              : '-',
                           label: 'menit',
                         ),
                       ),
@@ -324,7 +391,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
                   // Portion calculator
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -383,15 +451,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
-          ),
-          // Tab bar
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TabBarDelegate(
-              TabBar(
+
+            // ── Tab bar ───────────────────────────────────────────────────
+            Container(
+              color: AppColors.surface,
+              child: TabBar(
                 controller: _tabCtrl,
                 indicatorColor: AppColors.primary,
                 labelColor: AppColors.primary,
@@ -403,24 +471,24 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 ],
               ),
             ),
-          ),
-          // Tab content
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: TabBarView(
-              controller: _tabCtrl,
-              children: [
-                _IngredientsTab(recipe: recipe, portion: _portion),
-                _StepsTab(recipe: recipe),
-                _ReviewsTab(
-                  reviews: _reviews,
-                  loaded: _reviewsLoaded,
-                  onAddReview: _showReviewDialog,
-                ),
-              ],
-            ),
-          ),
-        ],
+
+            // ── Tab content (BUKAN TabBarView — langsung render berdasarkan index) ──
+            // ✅ TabBarView di dalam SingleChildScrollView crash di web
+            // karena dua scroll controller bentrok
+            if (_activeTab == 0)
+              _IngredientsContent(recipe: recipe, portion: _portion)
+            else if (_activeTab == 1)
+              _StepsContent(recipe: recipe)
+            else
+              _ReviewsContent(
+                reviews: _reviews,
+                loaded: _reviewsLoaded,
+                onAddReview: _showReviewDialog,
+              ),
+
+            const SizedBox(height: 100),
+          ],
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -437,140 +505,195 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   }
 }
 
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  const _TabBarDelegate(this.tabBar);
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
+class _PlaceholderImage extends StatelessWidget {
   @override
-  Widget build(context, _, __) =>
-      Container(color: AppColors.surface, child: tabBar);
-  @override
-  double get maxExtent => 46;
-  @override
-  double get minExtent => 46;
-  @override
-  bool shouldRebuild(_) => false;
+  Widget build(BuildContext context) => Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [AppColors.primaryLight, AppColors.primary],
+      ),
+    ),
+    child: const Center(
+      child: Icon(Icons.restaurant, size: 72, color: Colors.white70),
+    ),
+  );
 }
 
-class _IngredientsTab extends StatelessWidget {
+class _CircleBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? iconColor;
+  const _CircleBtn({required this.icon, required this.onTap, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: 18, color: iconColor ?? AppColors.textPrimary),
+    ),
+  );
+}
+
+// ── Tab contents (plain Column, bukan ListView dengan physics) ────────────────
+
+class _IngredientsContent extends StatelessWidget {
   final Recipe recipe;
   final int portion;
-  const _IngredientsTab({required this.recipe, required this.portion});
+  const _IngredientsContent({required this.recipe, required this.portion});
+
+  /// Parse bahan seperti "Tepung 200 gr" → skala jumlahnya jika portion > 1
+  String _scaleIngredient(String ingredient, int multiplier) {
+    if (multiplier <= 1) return ingredient;
+    // Regex: cari angka (termasuk desimal) dalam string
+    final numRegex = RegExp(r'(\d+(?:[.,]\d+)?)');
+    return ingredient.replaceAllMapped(numRegex, (match) {
+      final original = match.group(1)!.replaceAll(',', '.');
+      final value = double.tryParse(original);
+      if (value == null) return match.group(1)!;
+      final scaled = value * multiplier;
+      // Tampilkan tanpa desimal kalau hasil bulat
+      if (scaled == scaled.roundToDouble()) {
+        return scaled.toInt().toString();
+      }
+      return scaled.toStringAsFixed(1);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final ingrs = recipe.ingredientList;
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.all(20),
-      itemCount: ingrs.length,
-      separatorBuilder: (_, __) => const Divider(),
-      itemBuilder: (_, i) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                ingrs[i],
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textPrimary,
+      child: Column(
+        children: List.generate(
+          ingrs.length,
+          (i) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _scaleIngredient(ingrs[i], portion),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    if (portion > 1)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'x$portion',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
-            if (portion > 1)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'x$portion',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-          ],
+              if (i < ingrs.length - 1) const Divider(),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _StepsTab extends StatelessWidget {
+class _StepsContent extends StatelessWidget {
   final Recipe recipe;
-  const _StepsTab({required this.recipe});
+  const _StepsContent({required this.recipe});
 
   @override
   Widget build(BuildContext context) {
     final steps = recipe.stepList;
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return Padding(
       padding: const EdgeInsets.all(20),
-      itemCount: steps.length,
-      itemBuilder: (_, i) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${i + 1}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 5),
-                child: Text(
-                  steps[i],
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                    height: 1.5,
+      child: Column(
+        children: List.generate(
+          steps.length,
+          (i) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primaryLight,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${i + 1}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryDark,
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(
+                      steps[i],
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ReviewsTab extends StatelessWidget {
+class _ReviewsContent extends StatelessWidget {
   final List<Review> reviews;
   final bool loaded;
   final VoidCallback onAddReview;
-  const _ReviewsTab({
+  const _ReviewsContent({
     required this.reviews,
     required this.loaded,
     required this.onAddReview,

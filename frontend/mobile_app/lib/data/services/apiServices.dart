@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants.dart';
@@ -7,8 +7,6 @@ import '../models/model.dart';
 
 class ApiService {
   static const String baseUrl = AppConstants.baseUrl;
-
-  // ── Token & User Storage ──────────────────────────────
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
@@ -137,8 +135,6 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  /// Preview estimasi kalori dari AI sebelum simpan resep.
-  /// Dipanggil saat user pencet "Generate AI ✨" di form buat resep.
   static Future<Map<String, dynamic>> estimateCaloriesAI({
     required String title,
     required String ingredients,
@@ -238,22 +234,19 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  /// Log kalori dari FOTO — kirim File, diconvert ke base64 di sini
+  /// Log kalori dari FOTO — terima bytes (Uint8List), works di Web & Mobile
   static Future<Map<String, dynamic>> logFromPhoto({
-    required File imageFile,
+    required Uint8List imageBytes,
+    String imageExt = 'jpg',
     String? portionNote,
   }) async {
     final headers = await _authHeaders();
 
-    // Convert file ke base64
-    final bytes = await imageFile.readAsBytes();
-    final base64Image = base64Encode(bytes);
+    final base64Image = base64Encode(imageBytes);
 
-    // Deteksi media type dari ekstensi
-    final ext = imageFile.path.split('.').last.toLowerCase();
-    final mediaType = ext == 'png'
+    final mediaType = imageExt == 'png'
         ? 'image/png'
-        : ext == 'webp'
+        : imageExt == 'webp'
         ? 'image/webp'
         : 'image/jpeg';
 

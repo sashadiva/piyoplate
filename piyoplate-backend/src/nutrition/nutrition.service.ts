@@ -13,6 +13,9 @@ export class NutritionService {
     private readonly aiService: AiService,
   ) {}
 
+  // ── 1. LOG DARI TOMBOL "COOK" ─────────────────────────────────────────────
+  // Dipanggil oleh RecipesService setelah user masak resep.
+  // Source: 'recipe'
   async logFromCook(
     userId: number,
     recipeId: number,
@@ -42,6 +45,9 @@ export class NutritionService {
     });
   }
 
+  // ── 2. LOG MANUAL ─────────────────────────────────────────────────────────
+  // User input nama makanan + kalori sendiri (quick add / manual entry)
+  // Source: 'manual'
   async logManual(
     userId: number,
     dto: CreateLogDto,
@@ -65,6 +71,9 @@ export class NutritionService {
     };
   }
 
+  // ── 3. LOG DARI FOTO (AI) ─────────────────────────────────────────────────
+  // User upload foto → Claude Vision deteksi makanan & estimasi kalori
+  // Source: 'photo'
   async logFromPhoto(
     userId: number,
     dto: CreatePhotoLogDto,
@@ -125,6 +134,7 @@ export class NutritionService {
     });
   }
 
+  // ── DAILY SUMMARY ─────────────────────────────────────────────────────────
   async getDailySummary(userId: number) {
     const user = await this.prisma.users.findUnique({
       where: { id: userId },
@@ -151,6 +161,7 @@ export class NutritionService {
     const goal = user.daily_calorie_goal ?? 2000;
     const remaining = goal - consumed;
 
+    // Breakdown by source
     const bySource = todayLogs.reduce(
       (acc, log) => {
         const src = log.source || 'manual';

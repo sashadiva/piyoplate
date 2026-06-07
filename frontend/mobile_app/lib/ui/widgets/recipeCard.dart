@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../../data/models/model.dart';
 import '../../core/theme.dart';
+import '../../data/models/model.dart';
 
 class RecipeCard extends StatelessWidget {
   final Recipe recipe;
@@ -135,31 +136,35 @@ class _RecipeImage extends StatelessWidget {
 
   Color get _gradientStart {
     switch (cuisineType.toLowerCase()) {
-      case 'western':
-        return const Color(0xFF5DCAA5);
       case 'indonesia':
-        return const Color(0xFFFAC775);
+        return const Color(0xFFFFCC80); // orange muda
+      case 'western':
+        return const Color(0xFFFFAB91); // salmon
       case 'asia':
-        return const Color(0xFFF5C4B3);
+        return const Color(0xFFF5C4B3); // peach
       case 'vegetarian':
-        return const Color(0xFFC0DD97);
+        return const Color(0xFFC0DD97); // hijau muda
+      case 'dessert':
+        return const Color(0xFFF8BBD0); // pink
       default:
-        return const Color(0xFF9FE1CB);
+        return AppColors.primaryLight;
     }
   }
 
   Color get _gradientEnd {
     switch (cuisineType.toLowerCase()) {
-      case 'western':
-        return const Color(0xFF1D9E75);
       case 'indonesia':
-        return const Color(0xFFBA7517);
+        return AppColors.primaryDark;
+      case 'western':
+        return const Color(0xFFD35400);
       case 'asia':
-        return const Color(0xFFD85A30);
+        return const Color(0xFFBF360C);
       case 'vegetarian':
-        return const Color(0xFF3B6D11);
+        return const Color(0xFF558B2F);
+      case 'dessert':
+        return const Color(0xFFE91E63);
       default:
-        return const Color(0xFF1D9E75);
+        return AppColors.primary;
     }
   }
 
@@ -167,14 +172,8 @@ class _RecipeImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        if (imageUrl != null)
-          Image.network(
-            imageUrl!,
-            height: 110,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholder(),
-          )
+        if (imageUrl != null && imageUrl!.isNotEmpty)
+          _buildImage()
         else
           _placeholder(),
         if (onBookmark != null)
@@ -201,6 +200,34 @@ class _RecipeImage extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildImage() {
+    final url = imageUrl!;
+    // Support base64 data URL (data:image/...;base64,...)
+    if (url.startsWith('data:')) {
+      try {
+        final comma = url.indexOf(',');
+        if (comma != -1) {
+          final bytes = base64Decode(url.substring(comma + 1));
+          return Image.memory(
+            bytes,
+            height: 110,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholder(),
+          );
+        }
+      } catch (_) {}
+      return _placeholder();
+    }
+    return Image.network(
+      url,
+      height: 110,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _placeholder(),
     );
   }
 

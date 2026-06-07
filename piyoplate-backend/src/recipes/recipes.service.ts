@@ -14,7 +14,7 @@ export class RecipesService {
   ) {}
 
   async getAll(search?: string) {
-    return this.prisma.recipes.findMany({
+    const recipes = await this.prisma.recipes.findMany({
       where: search
         ? {
             OR: [
@@ -27,9 +27,22 @@ export class RecipesService {
         : undefined,
       include: {
         author: { select: { id: true, username: true, profile_picture_url: true } },
+        reviews: { select: { rating: true } },
         _count: { select: { reviews: true, bookmarks: true } },
       },
       orderBy: { created_at: 'desc' },
+    });
+
+    return recipes.map((recipe) => {
+      const avgRating =
+        recipe.reviews.length > 0
+          ? recipe.reviews.reduce((acc, r) => acc + r.rating, 0) / recipe.reviews.length
+          : 0;
+      const { reviews, ...rest } = recipe;
+      return {
+        ...rest,
+        avgRating: Number(avgRating.toFixed(1)),
+      };
     });
   }
 
@@ -61,10 +74,6 @@ export class RecipesService {
     };
   }
 
-  /**
-   * Buat resep baru.
-   * Jika use_ai_calories = true, kalori dihitung otomatis dari bahan via Claude.
-   */
   async create(authorId: number, data: CreateRecipeDto) {
     let caloriesPerServing = data.calories_per_serving;
     let aiCalorieBreakdown: string | null = null;

@@ -263,6 +263,7 @@ class AiCalorieResult {
       );
 }
 
+// Ingredient model for Add Recipe form
 class IngredientInput {
   String name;
   String qty;

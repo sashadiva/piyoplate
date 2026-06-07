@@ -6,7 +6,6 @@ export class CreatePhotoLogDto {
     description: 'Foto makanan dalam format base64 (tanpa prefix data:image)',
     example: '/9j/4AAQSkZJRgAB...',
   })
-
   @IsString()
   @IsNotEmpty()
   image_base64!: string;
@@ -16,7 +15,6 @@ export class CreatePhotoLogDto {
     example: 'image/jpeg',
     required: false,
   })
-
   @IsOptional()
   @IsString()
   media_type?: 'image/jpeg' | 'image/png' | 'image/webp';

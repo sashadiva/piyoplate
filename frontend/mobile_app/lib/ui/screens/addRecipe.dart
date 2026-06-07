@@ -1,10 +1,9 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
-import '../../data/services/authProvider.dart';
 import '../../core/theme.dart';
 import '../widgets/mainButton.dart';
 
@@ -22,7 +21,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
   String _cuisineType = '';
   String _calMode = 'manual'; // 'manual' | 'ai'
-  File? _image;
+  Uint8List? _imageBytes;
 
   final List<IngredientInput> _ingredients = [IngredientInput()];
   final List<TextEditingController> _steps = [TextEditingController()];
@@ -71,7 +70,10 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 final img = await picker.pickImage(source: ImageSource.camera);
-                if (img != null) setState(() => _image = File(img.path));
+                if (img != null) {
+                  final b = await img.readAsBytes();
+                  setState(() => _imageBytes = b);
+                }
               },
             ),
             ListTile(
@@ -83,7 +85,10 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               onTap: () async {
                 Navigator.pop(context);
                 final img = await picker.pickImage(source: ImageSource.gallery);
-                if (img != null) setState(() => _image = File(img.path));
+                if (img != null) {
+                  final b = await img.readAsBytes();
+                  setState(() => _imageBytes = b);
+                }
               },
             ),
             const SizedBox(height: 8),
@@ -240,7 +245,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         'cook_time_minutes': int.tryParse(_durationCtrl.text.trim()) ?? 0,
         'use_ai_calories': useAi,
         'servings': 1,
-        if (_image != null) 'image_url': '',
+        if (_imageBytes != null) 'image_url': '',
       });
 
       if (mounted) {
@@ -267,7 +272,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     setState(() {
       _cuisineType = '';
       _calMode = 'manual';
-      _image = null;
+      _imageBytes = null;
       _ingredients
         ..clear()
         ..add(IngredientInput());
@@ -289,7 +294,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Image upload
-                _ImageSection(image: _image, onTap: _pickImage),
+                _ImageSection(imageBytes: _imageBytes, onTap: _pickImage),
                 const SizedBox(height: 8),
 
                 // Basic Info
@@ -544,9 +549,9 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _ImageSection extends StatelessWidget {
-  final File? image;
+  final Uint8List? imageBytes;
   final VoidCallback onTap;
-  const _ImageSection({required this.image, required this.onTap});
+  const _ImageSection({required this.imageBytes, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -565,11 +570,11 @@ class _ImageSection extends StatelessWidget {
           ),
         ),
         clipBehavior: Clip.antiAlias,
-        child: image != null
+        child: imageBytes != null
             ? Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.file(image!, fit: BoxFit.cover),
+                  Image.memory(imageBytes!, fit: BoxFit.cover),
                   Positioned(
                     bottom: 8,
                     right: 8,
