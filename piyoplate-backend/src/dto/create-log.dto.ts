@@ -19,4 +19,8 @@ export class CreateLogDto {
   @Type(() => Number)
   @IsNumber()
   recipe_id?: number;
+
+  @IsOptional()
+  @IsString()
+  source?: string;
 }

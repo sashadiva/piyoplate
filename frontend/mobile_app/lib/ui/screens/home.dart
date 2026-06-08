@@ -37,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadRecipes();
+    _loadBookmarks();
   }
 
   @override
@@ -66,26 +67,57 @@ class _HomeScreenState extends State<HomeScreen> {
         )
         .toList();
   }
+  Future<void> _loadBookmarks() async {
+    try {
+      final bookmarks = await ApiService.getBookmarks();
+      setState(() {
+        _bookmarked.addAll(bookmarks.map((r) => r.id));
+      });
+    } catch (_) {}
+  }
 
-  void _toggleBookmark(int id) {
+  Future<void> _toggleBookmark(int id) async {
+    final isCurrentlyBookmarked = _bookmarked.contains(id);
     setState(() {
-      if (_bookmarked.contains(id)) {
+      if (isCurrentlyBookmarked) {
         _bookmarked.remove(id);
       } else {
         _bookmarked.add(id);
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _bookmarked.contains(id)
-              ? 'Resep disimpan ❤️'
-              : 'Resep dihapus dari bookmark',
-        ),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    try {
+      if (isCurrentlyBookmarked) {
+        await ApiService.removeBookmark(id);
+      } else {
+        await ApiService.addBookmark(id);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _bookmarked.contains(id)
+                  ? 'Resep disimpan ❤️'
+                  : 'Resep dihapus dari bookmark',
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch(e){
+        setState(() {
+          if (isCurrentlyBookmarked) {
+            _bookmarked.add(id);
+          } else {
+            _bookmarked.remove(id);
+          }
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menyimpan bookmark')),
+          );
+        }
+    }
   }
 
   @override
@@ -212,7 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           builder: (_) =>
                               RecipeDetailScreen(recipe: _filtered[i]),
                         ),
-                      ).then((_) => _loadRecipes()),
+                      ).then((_) {
+                        _loadRecipes();
+                        _loadBookmarks();
+                      }),
                     ),
                     childCount: _filtered.length,
                   ),

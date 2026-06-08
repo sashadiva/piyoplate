@@ -1,7 +1,7 @@
-import 'dart:typed_data';
-import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
 import '../../core/theme.dart';
@@ -21,7 +21,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
   String _cuisineType = '';
   String _calMode = 'manual'; // 'manual' | 'ai'
-  Uint8List? _imageBytes;
+  File? _image;
 
   final List<IngredientInput> _ingredients = [IngredientInput()];
   final List<TextEditingController> _steps = [TextEditingController()];
@@ -36,7 +36,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     'Dessert',
     'Lainnya',
   ];
-  final _units = ['gr', 'kg', 'sdm', 'sdt', 'ml', 'L', 'buah', 'secukupnya'];
+  final _units = ['gr', 'kg', 'sdm', 'sdt', 'ml', 'L', 'buah', 'butir', 'secukupnya'];
 
   @override
   void dispose() {
@@ -71,8 +71,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                 Navigator.pop(context);
                 final img = await picker.pickImage(source: ImageSource.camera);
                 if (img != null) {
-                  final b = await img.readAsBytes();
-                  setState(() => _imageBytes = b);
+                  setState(() => _image = File(img.path));
                 }
               },
             ),
@@ -84,10 +83,12 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               title: const Text('Pilih dari galeri'),
               onTap: () async {
                 Navigator.pop(context);
-                final img = await picker.pickImage(source: ImageSource.gallery);
-                if (img != null) {
-                  final b = await img.readAsBytes();
-                  setState(() => _imageBytes = b);
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.custom,
+                  allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+                );
+                if (result != null && result.files.single.path != null) {
+                  setState(() => _image = File(result.files.single.path!));
                 }
               },
             ),
@@ -236,6 +237,10 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     final useAi = _calMode == 'ai' && kcalManual == null;
 
     try {
+      String? imageUrl;
+      if (_image != null){
+        imageUrl = await ApiService.uploadImage(_image!);
+      }
       await ApiService.createRecipe({
         'title': _titleCtrl.text.trim(),
         'cuisine_type': _cuisineType,
@@ -245,7 +250,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         'cook_time_minutes': int.tryParse(_durationCtrl.text.trim()) ?? 0,
         'use_ai_calories': useAi,
         'servings': 1,
-        if (_imageBytes != null) 'image_url': '',
+        if (imageUrl != null) 'image_url': imageUrl,
       });
 
       if (mounted) {
@@ -272,7 +277,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     setState(() {
       _cuisineType = '';
       _calMode = 'manual';
-      _imageBytes = null;
+      _image = null;
+      _aiResult = null;
       _ingredients
         ..clear()
         ..add(IngredientInput());
@@ -294,7 +300,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Image upload
-                _ImageSection(imageBytes: _imageBytes, onTap: _pickImage),
+                _ImageSection(image: _image, onTap: _pickImage),
                 const SizedBox(height: 8),
 
                 // Basic Info
@@ -549,9 +555,9 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _ImageSection extends StatelessWidget {
-  final Uint8List? imageBytes;
+  final File? image;
   final VoidCallback onTap;
-  const _ImageSection({required this.imageBytes, required this.onTap});
+  const _ImageSection({required this.image, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -570,11 +576,11 @@ class _ImageSection extends StatelessWidget {
           ),
         ),
         clipBehavior: Clip.antiAlias,
-        child: imageBytes != null
+        child: image != null
             ? Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.memory(imageBytes!, fit: BoxFit.cover),
+                  Image.file(image!, fit: BoxFit.cover),
                   Positioned(
                     bottom: 8,
                     right: 8,
@@ -723,13 +729,7 @@ class _IngredientRow extends StatelessWidget {
           width: 88,
           child: DropdownButtonFormField<String>(
             value: item.unit,
-            isDense: true,
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 12,
-              ),
-            ),
+            isExpanded: true,
             items: units
                 .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                 .toList(),

@@ -791,7 +791,11 @@ class _AddLogSheetState extends State<_AddLogSheet> {
 
     setState(() => _submitting = true);
     try {
-      await ApiService.logManual(foodName: name, caloriesAdded: kcal);
+      await ApiService.logManual(
+        foodName: name, 
+        caloriesAdded: kcal,
+        source: _aiPreview != null ? 'photo' : 'manual',
+      );
       if (mounted) {
         Navigator.pop(context);
         widget.onAdded();

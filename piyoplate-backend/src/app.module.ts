@@ -8,6 +8,7 @@ import { NutritionModule } from './nutrition/nutrition.module';
 import { ReviewModule } from './review/review.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
 import { AiModule } from './ai/ai.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AiModule } from './ai/ai.module';
     ReviewModule,
     BookmarksModule,
     AiModule,
+    UploadModule
   ],
 })
 export class AppModule {}

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -217,6 +218,7 @@ class ApiService {
     required String foodName,
     required int caloriesAdded,
     int? recipeId,
+    String source = 'manual'
   }) async {
     final headers = await _authHeaders();
     final res = await http.post(
@@ -225,7 +227,7 @@ class ApiService {
       body: jsonEncode({
         'food_name': foodName,
         'calories_added': caloriesAdded,
-        if (recipeId != null) 'recipe_id': recipeId,
+        if (recipeId != null) 'recipe_id': recipeId, 'source' : source,
       }),
     );
     if (res.statusCode != 200 && res.statusCode != 201) {
@@ -381,4 +383,27 @@ class ApiService {
     }
     return User.fromJson(jsonDecode(res.body));
   }
+  
+  static Future<String> uploadImage(File imageFile) async {
+    final uri = Uri.parse('$baseUrl/upload'); // your upload endpoint
+    final request = http.MultipartRequest('POST', uri);
+
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image',           // field name your backend expects
+        imageFile.path,
+      ),
+    );
+
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+    final json = jsonDecode(body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return json['image_url'] as String; // whatever key your backend returns
+    } else {
+      throw Exception('Gagal upload gambar: ${json['message']}');
+    }
+  }
+    
 }

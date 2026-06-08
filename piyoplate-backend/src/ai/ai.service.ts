@@ -49,23 +49,23 @@ export class AiService {
 
     const prompt = `Kamu adalah ahli gizi. Estimasikan total kalori untuk resep berikut.
 
-Nama resep: ${title}
-Jumlah porsi: ${servings}
-Bahan-bahan:
-${ingredients}
+    Nama resep: ${title}
+    Jumlah porsi: ${servings}
+    Bahan-bahan:
+    ${ingredients}
 
-Berikan response dalam format JSON berikut SAJA, tanpa teks lain, tanpa markdown code block:
-{
-  "calories_per_serving": <angka bulat kalori per porsi>,
-  "breakdown": "<penjelasan singkat kalori per bahan utama>",
-  "notes": "<catatan singkat nilai gizi>"
-}
+    Berikan response dalam format JSON berikut SAJA, tanpa teks lain, tanpa markdown code block:
+    {
+      "calories_per_serving": <angka bulat kalori per porsi>,
+      "breakdown": "<penjelasan singkat kalori per bahan utama>",
+      "notes": "<catatan singkat nilai gizi>"
+    }
 
-Aturan:
-- calories_per_serving = estimasi kalori untuk SATU porsi
-- Gunakan standar kalori umum (nasi 130kkal/100gr, ayam 165kkal/100gr, telur 70kkal, dll)
-- Jika jumlah bahan tidak jelas, pakai estimasi wajar untuk 1 porsi
-- Hanya balas dengan JSON murni, tidak ada teks lain`;
+    Aturan:
+    - calories_per_serving = estimasi kalori untuk SATU porsi
+    - Gunakan standar kalori umum (nasi 130kkal/100gr, ayam 165kkal/100gr, telur 70kkal, dll)
+    - Jika jumlah bahan tidak jelas, pakai estimasi wajar untuk 1 porsi
+    - Hanya balas dengan JSON murni, tidak ada teks lain`;
 
     try {
       const result = await model.generateContent(prompt);
@@ -88,6 +88,8 @@ Aturan:
         notes: parsed.notes || '',
       };
     } catch (error) {
+      console.error('=== AI INGREDIENTS ERROR ===');
+      console.error(error);
       throw new BadRequestException(
         `Gagal estimasi kalori dari AI`,
       );
@@ -115,24 +117,24 @@ Aturan:
 
     const prompt = `Kamu adalah ahli gizi dengan keahlian mendeteksi makanan dari foto.
 
-Identifikasi semua makanan yang terlihat di foto ini dan estimasikan total kalorinya.
-${portionContext}
+    Identifikasi semua makanan yang terlihat di foto ini dan estimasikan total kalorinya.
+    ${portionContext}
 
-Berikan response dalam format JSON berikut SAJA, tanpa teks lain, tanpa markdown code block:
-{
-  "food_name": "<nama makanan dalam Bahasa Indonesia, pisahkan dengan koma jika lebih dari 1>",
-  "calories_estimated": <total kalori semua makanan, angka bulat>,
-  "confidence": "<high|medium|low>",
-  "breakdown": "<breakdown estimasi kalori per item makanan>",
-  "portion_note": "<perkiraan ukuran/berat porsi dari foto>"
-}
+    Berikan response dalam format JSON berikut SAJA, tanpa teks lain, tanpa markdown code block:
+    {
+      "food_name": "<nama makanan dalam Bahasa Indonesia, pisahkan dengan koma jika lebih dari 1>",
+      "calories_estimated": <total kalori semua makanan, angka bulat>,
+      "confidence": "<high|medium|low>",
+      "breakdown": "<breakdown estimasi kalori per item makanan>",
+      "portion_note": "<perkiraan ukuran/berat porsi dari foto>"
+    }
 
-Aturan:
-- food_name: nama makanan yang terdeteksi
-- calories_estimated: total kalori semua yang ada di foto/piring
-- confidence: "high" jika makanan jelas, "medium" jika kurang jelas, "low" jika tidak yakin
-- Jika bukan foto makanan: set food_name "Tidak terdeteksi" dan calories_estimated 0
-- Hanya balas dengan JSON murni`;
+    Aturan:
+    - food_name: nama makanan yang terdeteksi
+    - calories_estimated: total kalori semua yang ada di foto/piring
+    - confidence: "high" jika makanan jelas, "medium" jika kurang jelas, "low" jika tidak yakin
+    - Jika bukan foto makanan: set food_name "Tidak terdeteksi" dan calories_estimated 0
+    - Hanya balas dengan JSON murni`;
 
     try {
       const result = await model.generateContent([
@@ -164,6 +166,8 @@ Aturan:
         portion_note: parsed.portion_note || '',
       };
     } catch (error) {
+      console.error('=== AI PHOTO ERROR ===');
+     console.error(error);
       throw new BadRequestException(
         `Gagal deteksi kalori dari foto`,
       );

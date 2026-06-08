@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AiService } from '../ai/ai.service';
 import { CreateLogDto } from '../dto/create-log.dto';
 import { CreatePhotoLogDto } from '../dto/create-photo-log.dto';
+import { log_source } from '@prisma/client';
 
 export type LogSource = 'recipe' | 'manual' | 'photo';
 
@@ -58,7 +59,7 @@ export class NutritionService {
         recipe_id: dto.recipe_id ?? null,
         food_name: dto.food_name,
         calories_added: dto.calories_added,
-        source: 'manual',
+        source: dto.source as log_source ?? 'manual',
       },
       include: {
         recipe: { select: { title: true } },
@@ -78,7 +79,6 @@ export class NutritionService {
     userId: number,
     dto: CreatePhotoLogDto,
   ): Promise<{
-    message: string;
     ai_result: {
       food_name: string;
       calories_estimated: number;
@@ -86,7 +86,8 @@ export class NutritionService {
       breakdown: string;
       portion_note: string;
     };
-    data: any;
+    message?: string;
+    data?: any;
   }> {
     // Minta Claude analisis foto
     const aiResult = await this.aiService.estimateCaloriesFromPhoto(
@@ -103,22 +104,8 @@ export class NutritionService {
       };
     }
 
-    // Simpan log dengan hasil AI
-    const log = await this.prisma.nutrition_logs.create({
-      data: {
-        user_id: userId,
-        food_name: aiResult.food_name,
-        calories_added: aiResult.calories_estimated,
-        source: 'photo',
-        ai_confidence: aiResult.confidence,
-        ai_breakdown: aiResult.breakdown,
-      },
-    });
-
-    return {
-      message: `${aiResult.food_name} terdeteksi. +${aiResult.calories_estimated} kkal ditambahkan ke tracker`,
-      ai_result: aiResult,
-      data: log,
+    return { 
+      ai_result: aiResult
     };
   }
 
@@ -153,7 +140,18 @@ export class NutritionService {
       this.prisma.nutrition_logs.findMany({
         where: { user_id: userId, logged_at: { gte: today } },
         orderBy: { logged_at: 'desc' },
-        include: { recipe: { select: { title: true, image_url: true } } },
+        select: {
+          id: true,
+          user_id: true,
+          recipe_id: true,
+          food_name: true,
+          calories_added: true,
+          logged_at: true,
+          source: true,
+          ai_confidence: true,
+          ai_breakdown: true,
+          recipe: { select: { title: true, image_url: true } },
+        },
       }),
     ]);
 
