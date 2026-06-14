@@ -1,4 +1,4 @@
-import {  Controller,  Get,  Post,  Body,  Param,  Query,  Request,  UseGuards,  ParseIntPipe} from '@nestjs/common';
+import {  Controller,  Get,  Post,  Body,  Param,  Query,  Request,  UseGuards,  ParseIntPipe, Delete} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from '../dto/create-recipe.dto';
@@ -52,5 +52,14 @@ export class RecipesController {
   })
   cook(@Request() req, @Param('id', ParseIntPipe) recipeId: number) {
     return this.recipesService.cookRecipe(req.user.userId, recipeId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Menghapus resep yang sudah diposting', 
+    description: 'Menghapus resep dari database'
+  })
+  deleteRecipe(@Param('id') id:string){
+    return this.recipesService.deleteRecipe(Number(id))
   }
 }

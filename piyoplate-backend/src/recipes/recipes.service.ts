@@ -122,4 +122,17 @@ export class RecipesService {
   async cookRecipe(userId: number, recipeId: number) {
     return this.nutritionService.logFromCook(userId, recipeId);
   }
+
+  async deleteRecipe(id: number){
+    await this.prisma.reviews.deleteMany({
+      where: {
+        recipe_id: id
+      }
+    })
+    return this.prisma.recipes.delete({
+      where: {
+        id
+      }
+    })
+  }
 }
