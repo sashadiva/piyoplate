@@ -339,6 +339,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                       ...List.generate(
                         _ingredients.length,
                         (i) => Padding(
+                          key: ValueKey(_ingredients[i]),
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _IngredientRow(
                             item: _ingredients[i],
@@ -367,6 +368,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                       ...List.generate(
                         _steps.length,
                         (i) => Padding(
+                          key: ValueKey(_steps[i]),
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _StepRow(
                             stepNum: i + 1,
