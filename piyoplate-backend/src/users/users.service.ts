@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from '../dto/update-users.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -46,5 +52,24 @@ export class UsersService {
         role: true,
       },
     });
+  }
+
+  async changePassword(id: number, dto: ChangePasswordDto) {
+    const user = await this.prisma.users.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('User tidak ditemukan');
+
+    const isValid = await bcrypt.compare(dto.old_password, user.password);
+    if (!isValid) {
+      throw new BadRequestException('Password lama tidak sesuai');
+    }
+
+    const hashedNewPassword = await bcrypt.hash(dto.new_password, 10);
+
+    await this.prisma.users.update({
+      where: { id },
+      data: { password: hashedNewPassword },
+    });
+
+    return { message: 'Password berhasil diubah' };
   }
 }
