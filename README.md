@@ -34,7 +34,7 @@ Selain SDG 3, PiyoPlate secara tidak langsung juga turut mendukung SDG 12 (Respo
 
 Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya : 
 - Menyediakan satu platform bagi pengguna untuk menemukan, melihat, dan membuat resep, termasuk bahan-bahan, petunjuk langkah demi langkah, waktu persiapan, informasi kalori per porsi, serta mencatat kalori secara otomatis ke dalam pelacak nutrisi pribadi melalui tiga metode input yang berbeda.
-- Merancang dan mengimplementasikan arsitektur yang secara jelas memisahkan presentasi sisi klien dari logika aplikasi menggunakan kerangka kerja NestJS, validasi DTO, dan akses basis data PostgreSQL melalui - - Prisma ORM, sehingga setiap lapisan dapat dimodifikasi atau diuji secara independen.
+- Merancang dan mengimplementasikan arsitektur yang secara jelas memisahkan presentasi sisi klien dari logika aplikasi menggunakan kerangka kerja NestJS, validasi DTO, dan akses basis data PostgreSQL melalui Prisma ORM, sehingga setiap lapisan dapat dimodifikasi atau diuji secara independen.
 - Mengevaluasi sistem yang dihasilkan berdasarkan metrik kualitas perangkat lunak ISO/IEC 25010.
 
 <p align="center">
@@ -47,7 +47,7 @@ Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya :
 ## ✨ Fitur Utama
 
 * 🔐 **Authentication System**: Pendaftaran dan masuk akun yang aman menggunakan enkripsi Bcrypt.
-* 🍳 **Recipe Management**: Berbagi resep (Create, Read, Search) dengan detail nutrisi per porsi.
+* 🍳 **Recipe Management**: Berbagi resep (Create, Read, Search, Delete) dengan detail nutrisi per porsi.
 * 📊 **Calorie Tracking**: Pencatatan log makanan harian yang terintegrasi dengan target kalori individu.
 * 👤 **Profile Analytics**: Ringkasan asupan harian (Sisa kalori, total konsumsi, dan status gizi).
 * 🚀 **Prisma Integration**: Akses database super cepat dan aman dengan Prisma ORM.
