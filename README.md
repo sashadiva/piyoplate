@@ -64,18 +64,37 @@ $ npm install
 ```
 
 3. Konfigurasi Environment
-Buat file .env di root folder dan masukkan URL database : 
+   
+Buat file .env di root folder backend dan masukkan kode di bawah ini:
+```bash
+# ganti seluruh tulisan yang dalam bentuk CAPSLOCK (USER, PASSWORD, NAMA_DATABASE) sesuai dengan pengaturan database yang dimiliki.
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/NAMA_DATABASE?schema=public"
 
--> ganti seluruh tulisan yang dalam bentuk CAPSLOCK (USER, PASSWORD, NAMA_DATABASE) sesuai dengan pengaturan database yang dimiliki.
+# API Key dapat diisi dengan key yang diberikan melalui .txt file
+GEMINI_API_KEY=
+```
 
-5. Setup Database (Prisma)
+4. Setup Database (Prisma)
 
 ```bash
 $ npx prisma generate
 $ npx prisma db push
 ```
+
+5. Setup Frontend
+```bash
+$ flutter pub get
+```
+
 5. Jalankan Aplikasi
 ```bash
+$ cd piyoplate-backend
 $ npm run start:dev
+
+# Di terminal baru
+$ cd frontend
+$ cd mobile_app
+$ flutter run
 ```
+
+*kode ini dirancang untuk dijalankan pada Android Emulator
