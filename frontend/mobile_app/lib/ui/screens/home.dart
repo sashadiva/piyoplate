@@ -71,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final bookmarks = await ApiService.getBookmarks();
       setState(() {
+        _bookmarked.clear();
         _bookmarked.addAll(bookmarks.map((r) => r.id));
       });
     } catch (_) {}

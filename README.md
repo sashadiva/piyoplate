@@ -36,7 +36,7 @@ Aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan Nest
 | Komponen | Teknologi |
 | :--- | :--- |
 | **Framework** | NestJS (Node.js) |
-| **Database** | PostgreSQL / MySQL |
+| **Database** | PostgreSQL |
 | **ORM** | Prisma |
 | **Security** | Bcrypt & Validation Pipes |
 | **Documentation** | Postman & README |
@@ -49,13 +49,14 @@ Aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan Nest
 Pastikan kamu sudah menginstall:
 - [Node.js](https://nodejs.org/) (v16 atau terbaru)
 - [PostgreSQL](https://www.postgresql.org/)
+- Flutter SDK
 
 ### 2. Instalasi
 1. Clone Project
 
 ```bash
 $ git clone https://github.com/sashadiva/piyoplate.git
-$ cd piyoplate-backend
+$ cd piyoplate/piyoplate-backend
 ```
 
 2. Install Dependencies
@@ -64,18 +65,47 @@ $ npm install
 ```
 
 3. Konfigurasi Environment
-Buat file .env di root folder dan masukkan URL database : 
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/NAMA_DATABASE?schema=public"
+   
+Buat file .env di root folder backend dan masukkan kode di bawah ini:
+```env
+# ganti seluruh tulisan yang dalam bentuk CAPSLOCK (USER, PASSWORD, NAMA_DATABASE) sesuai dengan pengaturan database yang dimiliki.
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/piyoplate?schema=public"
 
--> ganti seluruh tulisan yang dalam bentuk CAPSLOCK (USER, PASSWORD, NAMA_DATABASE) sesuai dengan pengaturan database yang dimiliki.
+# API Key dapat diisi dengan key yang diberikan melalui .txt file
+GEMINI_API_KEY=
+```
 
-5. Setup Database (Prisma)
+4. Setup Database (PostGreSQL & Prisma)
+```bash
+# Jalankan pada terminal yang dapat mengakses `psql`
+# Pada Windows, jika 'psql' tidak dikenali, buka folder PostgreSQL `bin`
+# contoh: C:\Program Files\PostgreSQL\18\bin
+$ psql -U postgres -c "CREATE DATABASE piyoplate;"
+
+# Ganti path berikut dengan lokasi file `piyoplate_backup.sql`
+$ psql -U postgres -d piyoplate -f "C:\path\to\piyoplate_backup.sql"
+```
 
 ```bash
+# dilakukan di path piyoplate-backend
 $ npx prisma generate
-$ npx prisma db push
 ```
-5. Jalankan Aplikasi
+
+5. Setup Frontend
 ```bash
-$ npm run start:dev
+$ cd frontend/mobile_app
+$ flutter pub get
 ```
+
+6. Jalankan Aplikasi
+```bash
+# Terminal 1 (Backend)
+$ cd piyoplate-backend
+$ npm run start:dev
+
+# Terminal 2 (Frontend)
+$ cd frontend/mobile_app
+$ flutter run
+```
+
+*kode ini dirancang untuk dijalankan pada Android Emulator

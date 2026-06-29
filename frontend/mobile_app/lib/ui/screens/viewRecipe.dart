@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../data/services/authProvider.dart';
 import '../../data/models/model.dart';
 import '../../data/services/apiServices.dart';
 import '../../core/theme.dart';
@@ -24,6 +26,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   List<Review> _reviews = [];
   bool _reviewsLoaded = false;
   int _activeTab = 0;
+
 
   static const _portions = [1, 2, 4, 6];
 
@@ -113,6 +116,49 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           SnackBar(
             content: Text(e.toString().replaceFirst('Exception: ', '')),
             backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteRecipe() async{
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Apakah Anda yakin untuk menghapus resep ini?'),
+        content: const Text('Resep ini akan dihapus secara permanen.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false), 
+            child: const Text('Batal'), 
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Hapus', style: TextStyle(color: AppColors.danger))
+          )
+        ]
+      )
+    );
+    if (confirmed != true){
+      return;
+    }
+    try {
+      await ApiService.deleteRecipe(widget.recipe.id);
+      if (mounted){
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Resep berhasil dihapus'),
+            behavior: SnackBarBehavior.floating
+          )
+        );
+      }
+    } catch (e){
+      if (mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.danger,
           ),
         );
       }
@@ -250,6 +296,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   @override
   Widget build(BuildContext context) {
     final recipe = widget.recipe;
+    final currentUser = context.watch<AuthProvider>().user;
+    final isOwnRecipe = currentUser != null && recipe.authorId == currentUser.id;
     return Scaffold(
       body: SingleChildScrollView(
         // ✅ Ganti CustomScrollView+SliverFillRemaining → SingleChildScrollView
@@ -300,7 +348,47 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 8,
                   right: 12,
-                  child: _CircleBtn(
+                  child: isOwnRecipe ? PopupMenuButton<String> (
+                    icon: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        shape: BoxShape.circle,
+                      ), 
+                      child: const Icon(Icons.more_vert, size: 18, color: AppColors.textPrimary),
+                    ),
+                    padding: EdgeInsets.zero,
+                    onSelected: (value){
+                      if (value == 'bookmark'){
+                        _toggleBookmark();
+                      } else if (value == 'delete'){
+                        _deleteRecipe();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'bookmark',
+                        child: Row(
+                          children: [
+                            Icon(_isBookmarked ? Icons.bookmark : Icons.bookmark_border, size: 18, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text(_isBookmarked ? 'Hapus bookmark' : 'Bookmark')
+                          ]
+                        )
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: AppColors.danger),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: AppColors.danger))
+                          ],
+                        )
+                      )
+                    ]
+                  ) : _CircleBtn(
                     icon: _isBookmarked
                         ? Icons.bookmark
                         : Icons.bookmark_border,
