@@ -96,6 +96,13 @@ class ApiService {
     return data;
   }
 
+  static Future<int?> getCurrentUserId() async{
+    final user = await getSavedUser();
+    if (user == null){
+      return null;
+    }
+    return user['id'] as int;
+  }
   // ── Recipes ───────────────────────────────────────────
 
   static Future<List<Recipe>> getRecipes({String? search}) async {
@@ -165,6 +172,18 @@ class ApiService {
     );
     if (res.statusCode != 200 && res.statusCode != 201) {
       throw Exception(_parseError(res, 'Gagal memasak resep'));
+    }
+    return jsonDecode(res.body);
+  }
+
+  static Future<Map<String, dynamic>> deleteRecipe(int recipeId) async{
+    final headers = await _authHeaders();
+    final res = await http.delete(
+      Uri.parse('$baseUrl/recipes/$recipeId'),
+      headers: headers,
+    );
+    if (res.statusCode != 200 && res.statusCode != 201){
+      throw Exception(_parseError(res, 'Gagal menghapus resep'));
     }
     return jsonDecode(res.body);
   }
