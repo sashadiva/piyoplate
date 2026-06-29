@@ -5,6 +5,7 @@ import '../../core/theme.dart';
 import '../../ui/screens/Login.dart';
 import '../../ui/screens/Register.dart';
 import '../../ui/screens/mainShell.dart';
+import '../../ui/screens/splash.dart';
 
 void main() {
   runApp(
@@ -24,8 +25,27 @@ class MyApp extends StatelessWidget {
       title: 'PiyoPlate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const _RootScreen(),
+      home: const _SplashWrapper(),
     );
+  }
+}
+
+class _SplashWrapper extends StatefulWidget {
+  const _SplashWrapper();
+
+  @override
+  State<_SplashWrapper> createState() => _SplashWrapperState();
+}
+
+class _SplashWrapperState extends State<_SplashWrapper> {
+  bool _splashDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_splashDone) {
+      return SplashScreen(onDone: () => setState(() => _splashDone = true));
+    }
+    return const _RootScreen();
   }
 }
 
