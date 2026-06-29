@@ -18,11 +18,31 @@
 ---
 
 ## 📖 Tentang Project
-Aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan NestJS, Prisma ORM, dan PostgreSQL.
+Aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan NestJS, Prisma ORM, dan PostgreSQL. 
+
+PiyoPlate dikembangkan dengan landasan kontribusi terhadap *Sustainable Development Goals (SDG) ke-3*, yaitu Kehidupan Sehat dan Sejahtera (Good Health and Well-Being). Tujuan global ini menekankan pentingnya akses terhadap informasi kesehatan yang andal serta upaya pencegahan penyakit, termasuk penyakit tidak menular yang erat kaitannya dengan pola makan yang tidak terkontrol.
+Secara lebih spesifik, PiyoPlate berkontribusi pada beberapa target turunan SDG 3, di antaranya:
+- Mengurangi angka kematian dini akibat penyakit tidak menular melalui upaya pencegahan berbasis pemantauan pola makan sehari-hari.
+- Mendukung akses terhadap layanan dan informasi kesehatan yang esensial, dalam hal ini informasi kalori, secara gratis dan mudah dijangkau melalui aplikasi mobile.
+- Memperkuat kapasitas individu dalam manajemen risiko kesehatan pribadi melalui teknologi digital, seperti estimasi kalori berbasis AI dan ringkasan asupan harian yang dipersonalisasi.
+Dengan fitur pencatatan kalori, ringkasan asupan harian, serta status kalori yang ditampilkan secara real-time, PiyoPlate mendorong penggunanya untuk lebih sadar terhadap pola makan masing-masing, sehingga selaras dengan semangat pencegahan dini yang menjadi inti dari SDG 3.
+Selain SDG 3, PiyoPlate secara tidak langsung juga turut mendukung SDG 12 (Responsible Consumption and Production), khususnya pada aspek konsumsi pangan yang lebih sadar dan terukur.
+
 <p align="center">
   <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/6.png" width="500" alt="Piyoplate Logo" /></a>
 </p>
+
+Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya : 
+- Menyediakan satu platform bagi pengguna untuk menemukan, melihat, dan membuat resep, termasuk bahan-bahan, petunjuk langkah demi langkah, waktu persiapan, informasi kalori per porsi, serta mencatat kalori secara otomatis ke dalam pelacak nutrisi pribadi melalui tiga metode input yang berbeda.
+- Merancang dan mengimplementasikan arsitektur yang secara jelas memisahkan presentasi sisi klien dari logika aplikasi menggunakan kerangka kerja NestJS, validasi DTO, dan akses basis data PostgreSQL melalui - - Prisma ORM, sehingga setiap lapisan dapat dimodifikasi atau diuji secara independen.
+- Mengevaluasi sistem yang dihasilkan berdasarkan metrik kualitas perangkat lunak ISO/IEC 25010.
+
+<p align="center">
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/8.png" width="500" alt="Piyoplate Logo" /></a>
+</p>
+
 ---
+
 
 ## ✨ Fitur Utama
 
@@ -32,6 +52,16 @@ Aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan Nest
 * 👤 **Profile Analytics**: Ringkasan asupan harian (Sisa kalori, total konsumsi, dan status gizi).
 * 🚀 **Prisma Integration**: Akses database super cepat dan aman dengan Prisma ORM.
 
+<p align="center">
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/9.png" width="500" alt="Piyoplate Logo" /></a>
+</p>
+
+---
+
+##  Architecture
+<p align="center">
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/19.png" width="500" alt="Piyoplate Logo" /></a>
+</p>
 ---
 
 ## 🛠️ Tech Stack
