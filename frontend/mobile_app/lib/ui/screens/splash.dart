@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Image.asset(
           'assets/images/LogoPiyoPlate.png', // yang belum di-crop
-          width: 200,
+          width: 500,
         ),
       ),
     );
