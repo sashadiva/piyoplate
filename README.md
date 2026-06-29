@@ -19,6 +19,9 @@
 
 ## 📖 Tentang Project
 Aplikasi PiyoPlate (Calorie Tracker & Recipe Sharing). Dibangun menggunakan NestJS, Prisma ORM, dan PostgreSQL.
+<p align="center">
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/6.png" width="500" alt="Piyoplate Logo" /></a>
+</p>
 ---
 
 ## ✨ Fitur Utama
