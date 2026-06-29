@@ -29,7 +29,7 @@ Dengan fitur pencatatan kalori, ringkasan asupan harian, serta status kalori yan
 Selain SDG 3, PiyoPlate secara tidak langsung juga turut mendukung SDG 12 (Responsible Consumption and Production), khususnya pada aspek konsumsi pangan yang lebih sadar dan terukur.
 
 <p align="center">
-  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/6.png" width="500" alt="Piyoplate Logo" /></a>
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/6.png" width="1000" alt="Piyoplate Logo" /></a>
 </p>
 
 Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya : 
@@ -38,7 +38,7 @@ Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya :
 - Mengevaluasi sistem yang dihasilkan berdasarkan metrik kualitas perangkat lunak ISO/IEC 25010.
 
 <p align="center">
-  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/8.png" width="500" alt="Piyoplate Logo" /></a>
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/8.png" width="1000" alt="Piyoplate Logo" /></a>
 </p>
 
 ---
@@ -53,15 +53,16 @@ Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya :
 * 🚀 **Prisma Integration**: Akses database super cepat dan aman dengan Prisma ORM.
 
 <p align="center">
-  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/9.png" width="500" alt="Piyoplate Logo" /></a>
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/9.png" width="1000" alt="Piyoplate Logo" /></a>
 </p>
 
 ---
 
 ##  Architecture
 <p align="center">
-  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/19.png" width="500" alt="Piyoplate Logo" /></a>
+  <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/19.png" width="1000" alt="Piyoplate Logo" /></a>
 </p>
+
 ---
 
 ## 🛠️ Tech Stack
