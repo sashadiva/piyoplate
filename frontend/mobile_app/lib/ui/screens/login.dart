@@ -53,13 +53,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.border, width: 0.5),
                   ),
-                  child: const Icon(
-                    Icons.restaurant_menu_rounded,
-                    size: 40,
-                    color: AppColors.primary,
+                  padding: const EdgeInsets.all(4),
+                  child: Image.asset(
+                    'assets/images/LogoPiyoPlate_cropped.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),

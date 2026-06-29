@@ -1,3 +1,6 @@
+import 'changePassword.dart';
+import 'notificationSettings.dart';
+import 'about.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../data/services/apiServices.dart';
@@ -258,17 +261,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _SettingsItem(
                   icon: Icons.notifications_none_outlined,
                   label: 'Notifikasi',
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsScreen(),
+                    ),
+                  ),
                 ),
                 _SettingsItem(
                   icon: Icons.lock_outline,
                   label: 'Ubah password',
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ChangePasswordScreen(),
+                    ),
+                  ),
                 ),
                 _SettingsItem(
                   icon: Icons.info_outline,
                   label: 'Tentang PiyoPlate',
-                  onTap: () {},
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AboutScreen(),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _SettingsItem(

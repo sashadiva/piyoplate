@@ -218,7 +218,7 @@ class ApiService {
     required String foodName,
     required int caloriesAdded,
     int? recipeId,
-    String source = 'manual'
+    String source = 'manual',
   }) async {
     final headers = await _authHeaders();
     final res = await http.post(
@@ -227,7 +227,8 @@ class ApiService {
       body: jsonEncode({
         'food_name': foodName,
         'calories_added': caloriesAdded,
-        if (recipeId != null) 'recipe_id': recipeId, 'source' : source,
+        if (recipeId != null) 'recipe_id': recipeId,
+        'source': source,
       }),
     );
     if (res.statusCode != 200 && res.statusCode != 201) {
@@ -383,14 +384,32 @@ class ApiService {
     }
     return User.fromJson(jsonDecode(res.body));
   }
-  
+
+  static Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final headers = await _authHeaders();
+    final res = await http.patch(
+      Uri.parse('$baseUrl/users/change-password'),
+      headers: headers,
+      body: jsonEncode({
+        'old_password': oldPassword,
+        'new_password': newPassword,
+      }),
+    );
+    if (res.statusCode != 200 && res.statusCode != 201) {
+      throw Exception(_parseError(res, 'Gagal mengubah password'));
+    }
+  }
+
   static Future<String> uploadImage(File imageFile) async {
     final uri = Uri.parse('$baseUrl/upload'); // your upload endpoint
     final request = http.MultipartRequest('POST', uri);
 
     request.files.add(
       await http.MultipartFile.fromPath(
-        'image',           // field name your backend expects
+        'image', // field name your backend expects
         imageFile.path,
       ),
     );
@@ -405,5 +424,4 @@ class ApiService {
       throw Exception('Gagal upload gambar: ${json['message']}');
     }
   }
-    
 }
