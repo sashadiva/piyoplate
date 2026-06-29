@@ -81,6 +81,7 @@ Aplikasi ini dibangun dengan tujuan tertentu yang diantaranya :
 <p align="center">
   <a href="" target="blank"><img src="./frontend/mobile_app/assets/images/1.png" width="1000" alt="Piyoplate Logo" /></a>
 </p>
+
 ### 1. Prasyarat
 Pastikan kamu sudah menginstall:
 - [Node.js](https://nodejs.org/) (v16 atau terbaru)
